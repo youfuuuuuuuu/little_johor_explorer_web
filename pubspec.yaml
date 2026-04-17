@@ -1,0 +1,64 @@
+name: little_johor_explorer
+description: A friendly AI-powered explorer for Johor, Malaysia.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  intl: ^0.20.2
+  confetti: ^0.8.0
+  dice_bear: ^1.0.0
+  permission_handler: ^12.0.1
+  image_picker: ^1.2.1
+
+  # UI & Assets
+  cupertino_icons: ^1.0.6
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.1
+  flutter_markdown_plus: ^1.0.7
+
+  # Firebase Core (Backend)
+  firebase_core: ^4.5.0
+  firebase_auth: ^6.1.4
+  cloud_firestore: ^6.1.3
+  firebase_storage: ^13.2.0
+  firebase_ai: ^3.11.0
+
+  # Local storage
+  shared_preferences: ^2.2.3
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Multimedia & Voice
+  http: ^1.6.0
+  flutter_tts: ^4.2.5
+  speech_to_text: ^7.3.0
+  audioplayers: ^6.6.0 
+
+  # Localization
+  flutter_localizations:
+    sdk: flutter
+  cloud_functions: ^6.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mockito: ^5.4.4
+  build_runner: ^2.4.9
+  record: ^6.2.0  
+  path_provider: ^2.1.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/images/avatars/
+    - assets/images/johor/
+    - assets/images/marteen_ke_johor_bahru/
+    - assets/images/marteen_ke_muar/
+    - assets/images/marteen_ke_kota_tinggi/
