@@ -40,7 +40,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final auth = Provider.of<AuthService>(context, listen: false);
     final lang = Provider.of<LanguageService>(context, listen: false);
 
-    // ⭐️ CHANGED: Now checks if the user is a parent OR an admin
     final bool canChangePassword =
         auth.currentUser?.role == 'parent' || auth.currentUser?.role == 'admin';
 
@@ -111,148 +110,150 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         auth.currentUser?.avatarUrl?.replaceFirst('file:///', '');
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: const Color(0xFFF8F9FE),
+      backgroundColor: Colors.white, // Threads-style clean white
       appBar: AppBar(
-        title: Text(lang.translate('edit_profile'),
+        title: Text(
+            lang
+                .translate('edit_profile')
+                .toLowerCase(), // Lowercase for modern look
             style: const TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 18,
-                color: Colors.black)),
-        backgroundColor: Colors.transparent,
+                color: Colors.black,
+                letterSpacing: -0.5)),
+        backgroundColor: Colors.white,
         elevation: 0,
-        surfaceTintColor: Colors.transparent,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black, size: 26),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: Stack(
-        children: [
-          _buildBackgroundLayer(),
-          SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  // --- Refined Avatar Section ---
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: Colors.black, width: 2), // High-end ring
+                      ),
+                      child: CircleAvatar(
+                        radius: 54,
+                        backgroundColor: const Color(0xFFF5F5F5),
+                        backgroundImage: cleanAvatarUrl != null
+                            ? AssetImage(cleanAvatarUrl)
+                            : null,
+                        child: cleanAvatarUrl == null
+                            ? const Icon(Icons.person,
+                                size: 50, color: Colors.grey)
+                            : null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // --- Form Sections ---
+                  _buildCardWrapper(
+                    title: lang.translate('user_info'),
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.purple.withOpacity(0.1),
-                                blurRadius: 15,
-                                offset: const Offset(0, 5))
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Colors.grey.shade100,
-                          backgroundImage: cleanAvatarUrl != null
-                              ? AssetImage(cleanAvatarUrl)
-                              : null,
-                          child: cleanAvatarUrl == null
-                              ? const Icon(Icons.person,
-                                  size: 50, color: Color(0xFFE1BEE7))
-                              : null,
-                        ),
+                      _buildStyledField(
+                        controller: _nameController,
+                        label: lang.translate('username'),
+                        icon: Icons.person_outline_rounded,
                       ),
-                      const SizedBox(height: 30),
-                      _buildCardWrapper(
-                        title: lang.translate('user_info'),
-                        children: [
-                          _buildStyledField(
-                            controller: _nameController,
-                            label: lang.translate('username'),
-                            icon: Icons.person_rounded,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildReadOnlyField(
-                            label: lang.translate('email_no_change'),
-                            value: auth.currentUser?.email ?? "",
-                            icon: Icons.email_rounded,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // ⭐️ CHANGED: Show the password card if they are parent OR admin
-                      if (canChangePassword)
-                        _buildCardWrapper(
-                          title: lang.translate('security'),
-                          children: [
-                            Text(lang.translate('leave_pass_empty'),
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.blueGrey.shade400)),
-                            const SizedBox(height: 16),
-                            _buildPasswordField(
-                                lang.translate('new_password'),
-                                _passwordController,
-                                _obscurePassword,
-                                () => setState(() =>
-                                    _obscurePassword = !_obscurePassword)),
-                            const SizedBox(height: 16),
-                            _buildPasswordField(
-                                lang.translate('confirm_new_password'),
-                                _confirmController,
-                                _obscureConfirm,
-                                () => setState(
-                                    () => _obscureConfirm = !_obscureConfirm)),
-                          ],
-                        ),
-
-                      // ⭐️ CHANGED: Updated the error text for children
-                      if (!canChangePassword)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
-                          child: Text(
-                            lang.currentLanguage == 'ms'
-                                ? "* Akaun kanak-kanak tidak boleh menukar kata laluan."
-                                : "* Children cannot change their own passwords.",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.blueGrey.shade400,
-                                fontStyle: FontStyle.italic),
-                          ),
-                        ),
-                      const SizedBox(height: 40),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _saveChanges,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFAB47BC),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25)),
-                            elevation: 0,
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2))
-                              : Text(lang.translate('save_changes'),
-                                  style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w900)),
-                        ),
+                      const SizedBox(height: 16),
+                      _buildReadOnlyField(
+                        label: lang.translate('email_no_change'),
+                        value: auth.currentUser?.email ?? "",
+                        icon: Icons.alternate_email_rounded,
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 20),
+
+                  if (canChangePassword)
+                    _buildCardWrapper(
+                      title: lang.translate('security'),
+                      children: [
+                        Text(lang.translate('leave_pass_empty').toLowerCase(),
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade400)),
+                        const SizedBox(height: 16),
+                        _buildPasswordField(
+                            lang.translate('new_password'),
+                            _passwordController,
+                            _obscurePassword,
+                            () => setState(
+                                () => _obscurePassword = !_obscurePassword)),
+                        const SizedBox(height: 16),
+                        _buildPasswordField(
+                            lang.translate('confirm_new_password'),
+                            _confirmController,
+                            _obscureConfirm,
+                            () => setState(
+                                () => _obscureConfirm = !_obscureConfirm)),
+                      ],
+                    ),
+
+                  if (!canChangePassword)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        lang.currentLanguage == 'ms'
+                            ? "* akaun kanak-kanak tidak boleh menukar kata laluan."
+                            : "* children cannot change their own passwords.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade400,
+                            fontStyle: FontStyle.italic),
+                      ),
+                    ),
+
+                  const SizedBox(height: 40),
+
+                  // --- Primary Action Pill ---
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _saveChanges,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black, // Solid Black action
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2))
+                          : Text(lang.translate('save_changes').toLowerCase(),
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -263,22 +264,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.purple.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4))
-          ]),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border:
+            Border.all(color: const Color(0xFFF0F0F0), width: 1), // Flat border
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
+          Text(title.toLowerCase(),
               style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.black)),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black54,
+                  letterSpacing: -0.2)),
           const SizedBox(height: 16),
           ...children,
         ],
@@ -286,62 +285,61 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildStyledField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-  }) {
+  Widget _buildStyledField(
+      {required TextEditingController controller,
+      required String label,
+      required IconData icon}) {
     return TextField(
       controller: controller,
-      style: const TextStyle(fontSize: 14, color: Colors.black),
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.blueGrey.shade400),
-        prefixIcon: Icon(icon, color: Colors.black, size: 20),
+        labelStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+        prefixIcon: Icon(icon, color: Colors.black, size: 18),
         filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide.none,
+        fillColor: const Color(0xFFFAFAFA),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black, width: 1),
         ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
 
-  Widget _buildReadOnlyField({
-    required String label,
-    required String value,
-    required IconData icon,
-  }) {
+  Widget _buildReadOnlyField(
+      {required String label, required String value, required IconData icon}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(15),
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.black),
+          Icon(icon, size: 18, color: Colors.grey.shade600),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.blueGrey.shade400,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 14, color: Colors.black),
-                ),
+                Text(label.toLowerCase(),
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w700)),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -355,24 +353,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      style: const TextStyle(fontSize: 14, color: Colors.black),
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.blueGrey.shade400),
-        prefixIcon:
-            const Icon(Icons.lock_rounded, color: Colors.black, size: 20),
+        labelStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+        prefixIcon: const Icon(Icons.lock_outline_rounded,
+            color: Colors.black, size: 18),
         suffixIcon: IconButton(
-            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
-                size: 20),
-            onPressed: onToggle,
-            color: Colors.blueGrey.shade300),
+          icon: Icon(
+              obscure ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+              size: 18),
+          onPressed: onToggle,
+          color: Colors.grey.shade400,
+        ),
         filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none),
+        fillColor: const Color(0xFFFAFAFA),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black, width: 1),
+        ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }

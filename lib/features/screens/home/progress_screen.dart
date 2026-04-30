@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:little_johor_explorer/data/services/local_storage_service.dart';
@@ -16,11 +15,19 @@ class ProgressScreen extends StatelessWidget {
     final lang = Provider.of<LanguageService>(context);
 
     if (storyService.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        backgroundColor: Color(0xFFFAFAFA),
+        body: Center(
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: Color(0xFF0A0A0A))),
+      );
     }
 
     final history = storage.getHistory();
     final earnedBadges = storage.getEarnedBadgeIds();
+    final points = storage.getPoints();
+    final readingTime = storage.getTotalReadingTime();
+
     final readingActivities = history
         .where((item) => item.contains("Read:"))
         .toList()
@@ -30,7 +37,7 @@ class ProgressScreen extends StatelessWidget {
       final title = item.replaceFirst("Read:", "").trim();
       return {
         'story': _findStoryByTitle(storyService.stories, title),
-        'points': 10
+        'points': 10,
       };
     }).toList();
 
@@ -43,229 +50,445 @@ class ProgressScreen extends StatelessWidget {
       final title = item.replaceFirst("Quiz:", "").trim();
       return {
         'story': _findStoryByTitle(storyService.stories, title),
-        'points': 10
+        'points': 10,
       };
     }).toList();
 
+    final int level = (points / 100).floor() + 1;
+    final double progress = (points % 100) / 100;
+
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(
-          lang.translate('my_progress'),
-          style: const TextStyle(
-              color: Colors.black, fontWeight: FontWeight.w900, fontSize: 20),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        automaticallyImplyLeading: true,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.purple.shade100.withOpacity(0.5),
-                  const Color(0xFFF8F9FE)
-                ],
-              ),
-            ),
-          ),
-          SafeArea(
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 10),
-                    child: _buildLevelHeader(storage.getPoints(), lang),
+      backgroundColor: const Color(0xFFFAFAFA),
+      body: LayoutBuilder(builder: (context, constraints) {
+        final double screenWidth = constraints.maxWidth;
+        final bool isLargeScreen = constraints.maxWidth > 800;
+
+        return SafeArea(
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Header
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Text(
+                    lang.translate('my_progress'),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0A0A0A),
+                      letterSpacing: -0.5,
+                    ),
                   ),
                 ),
-                _buildSectionTitle(lang.translate('my_achievements')),
-                SliverToBoxAdapter(
-                  child: _buildHorizontalBadgeList(earnedBadges),
+              ),
+
+              // Level card
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A0A0A),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  lang.translate('level').toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white.withOpacity(0.5),
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'LEVEL $level ${lang.translate('explorer').toUpperCase()}',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '$points XP',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            backgroundColor: Colors.white.withOpacity(0.1),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                                Colors.white),
+                            minHeight: 6,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${(progress * 100).toInt()}% to Level ${level + 1}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white.withOpacity(0.5),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                _buildSectionTitle(lang.currentLanguage == 'ms'
-                    ? "Cerita Telah Dibaca"
-                    : "Stories Taken"),
-                SliverToBoxAdapter(
-                  child:
-                      _buildSingleRowScrollList(readingActivities, false, lang),
+              ),
+
+              // Stat Cards Row
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: _statCard(
+                        icon: Icons.bolt_rounded,
+                        value: '$points',
+                        label: lang.translate('total_points'),
+                      )),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: _statCard(
+                        icon: Icons.schedule_rounded,
+                        value: '$readingTime',
+                        label: lang.translate('reading_time'),
+                        suffix: 'min',
+                      )),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: _statCard(
+                        icon: Icons.emoji_events_rounded,
+                        value: '${earnedBadges.length}',
+                        label: lang.translate('my_badges'),
+                      )),
+                    ],
+                  ),
                 ),
-                _buildSectionTitle(lang.currentLanguage == 'ms'
-                    ? "Kuiz Telah Diambil"
-                    : "Quizzes Taken"),
-                SliverToBoxAdapter(
-                  child: _buildSingleRowScrollList(quizActivities, true, lang),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 50)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+              ),
 
-  Widget _buildSingleRowScrollList(
-      List<Map<String, dynamic>> items, bool isQuiz, LanguageService lang) {
-    if (items.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: _buildNoResultsView(isQuiz
-            ? lang.translate('no_quizzes_taken')
-            : lang.translate('no_stories_read')),
-      );
-    }
+              // ── Badges Section (Show 8 on Web, 4 on Mobile) ────────────────
+              _sectionHeader(lang.translate('my_badges')),
+              SliverToBoxAdapter(
+                child:
+                    _buildBadgeGrid(earnedBadges, isLargeScreen, screenWidth),
+              ),
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        double screenWidth = constraints.maxWidth;
-        bool isLargeScreen = screenWidth > 600;
+              // ── Stories read (Dynamic 2/4) ────────────────────────────────
+              _sectionHeader(lang.currentLanguage == 'ms'
+                  ? "Cerita Telah Dibaca"
+                  : "Stories Read"),
+              SliverToBoxAdapter(
+                child: readingActivities.isEmpty
+                    ? _emptySection(lang.translate('no_stories_read'))
+                    : _horizontalActivityList(context, readingActivities, false,
+                        isLargeScreen, screenWidth),
+              ),
 
-        int crossAxisCount = isLargeScreen ? 4 : 2;
-        double spacing = 16.0;
-        double totalPadding = 48.0;
-        double containerHeight = isLargeScreen ? 450 : 250;
-        double cardWidth =
-            (screenWidth - totalPadding - (spacing * (crossAxisCount - 1))) /
-                crossAxisCount;
+              // ── Quizzes done (Dynamic 2/4) ────────────────────────────────
+              _sectionHeader(lang.currentLanguage == 'ms'
+                  ? "Kuiz Telah Diambil"
+                  : "Quizzes Taken"),
+              SliverToBoxAdapter(
+                child: quizActivities.isEmpty
+                    ? _emptySection(lang.translate('no_quizzes_taken'))
+                    : _horizontalActivityList(context, quizActivities, true,
+                        isLargeScreen, screenWidth),
+              ),
 
-        return SizedBox(
-          height: containerHeight,
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final activity = items[index];
-              return Container(
-                width: cardWidth,
-                margin: EdgeInsets.only(
-                    right: index == items.length - 1 ? 0 : spacing, bottom: 12),
-                child: _buildActivityCard(context, activity['story'] as Story,
-                    isQuiz, activity['points'] as int),
-              );
-            },
+              const SliverToBoxAdapter(child: SizedBox(height: 50)),
+            ],
           ),
         );
-      },
+      }),
     );
   }
 
-  Widget _buildActivityCard(
-      BuildContext context, Story story, bool isQuiz, int points) {
-    final String cleanPath = story.coverImageUrl.replaceFirst('file:///', '');
-
+  Widget _statCard({
+    required IconData icon,
+    required String value,
+    required String label,
+    String? suffix,
+  }) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF0F0F0)),
         boxShadow: [
           BoxShadow(
-            color: (isQuiz ? Colors.orange : Colors.purple).withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    color:
-                        isQuiz ? Colors.orange.shade50 : Colors.purple.shade50,
-                    child: story.coverImageUrl.isNotEmpty
-                        ? Image.asset(
-                            cleanPath,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.center,
-                          )
-                        : Icon(
-                            isQuiz ? Icons.extension : Icons.auto_stories,
-                            color: isQuiz
-                                ? Colors.orange.shade200
-                                : Colors.purple.shade200,
-                            size: 32,
-                          ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        "+$points",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFF0A0A0A)),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0A0A0A),
+                  letterSpacing: -0.5,
+                ),
               ),
+              if (suffix != null) ...[
+                const SizedBox(width: 2),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(suffix,
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade400,
+                          fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey.shade400,
+                  fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  SliverToBoxAdapter _sectionHeader(String title) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 14),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0A0A0A),
+            letterSpacing: -0.3,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadgeGrid(List<String> earnedIds, bool isLarge, double width) {
+    // Show 8 on Web/Tab, 4 on Mobile
+    final int visibleCount = isLarge ? 8 : 4;
+    final double padding = 40.0; // Left + Right padding
+    final double spacing = 10.0 * (visibleCount - 1);
+    final double itemWidth = (width - padding - spacing) / visibleCount;
+
+    final List<Map<String, String>> badges = [
+      {'id': 'first_discovery', 'label': 'First Read', 'icon': '📖'},
+      {'id': 'JOHOR-BAHRU Master', 'label': 'J.Bahru', 'icon': '🏙️'},
+      {'id': 'MUAR Master', 'label': 'Muar', 'icon': '🌊'},
+      {'id': 'KOTA-TINGGI Master', 'label': 'K.Tinggi', 'icon': '⛰️'},
+      {'id': 'KULAI Master', 'label': 'Kulai', 'icon': '🌿'},
+      {'id': 'PONTIAN Master', 'label': 'Pontian', 'icon': '🐟'},
+      {'id': 'MERSING Master', 'label': 'Mersing', 'icon': '🏝️'},
+      {'id': 'BATU-PAHAT Master', 'label': 'B.Pahat', 'icon': '🏛️'},
+      {'id': 'SEGAMAT Master', 'label': 'Segamat', 'icon': '🌾'},
+      {'id': 'TANGKAK Master', 'label': 'Tangkak', 'icon': '🎋'},
+      {'id': 'KLUANG Master', 'label': 'Kluang', 'icon': '☕'},
+    ];
+
+    return SizedBox(
+      height: 100, // Slightly taller for stability
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: badges.length,
+        itemBuilder: (context, index) {
+          final badge = badges[index];
+          final isEarned = earnedIds.contains(badge['id']);
+          return Container(
+            width: itemWidth, // Calculated width
+            margin: const EdgeInsets.only(right: 10),
+            decoration: BoxDecoration(
+              color: isEarned ? const Color(0xFF0A0A0A) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: isEarned
+                      ? const Color(0xFF0A0A0A)
+                      : const Color(0xFFF0F0F0)),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    story.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 13,
-                      color: Color(0xFF1A1A1A),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: (isQuiz ? Colors.orange : Colors.purple)
-                          .withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(isEarned ? badge['icon']! : '🔒',
+                    style: TextStyle(fontSize: isLarge ? 20 : 18)),
+                const SizedBox(height: 4),
+                FittedBox(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Text(
-                      isQuiz ? "CHALLENGE" : "STORY",
+                      badge['label']!,
                       style: TextStyle(
                         fontSize: 8,
-                        fontWeight: FontWeight.w800,
-                        color: isQuiz
-                            ? Colors.orange.shade800
-                            : Colors.purple.shade800,
-                        letterSpacing: 0.5,
+                        fontWeight: FontWeight.w700,
+                        color: isEarned ? Colors.white : Colors.grey.shade300,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _horizontalActivityList(
+      BuildContext context,
+      List<Map<String, dynamic>> items,
+      bool isQuiz,
+      bool isLarge,
+      double width) {
+    final int visibleCount = isLarge ? 4 : 2;
+    final double padding = 40.0;
+    final double spacing = 12.0 * (visibleCount - 1);
+    final double itemWidth = (width - padding - spacing) / visibleCount;
+
+    return SizedBox(
+      height: isLarge ? 240 : 210, // Tall enough so web images don't clip
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        physics: const BouncingScrollPhysics(),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final activity = items[index];
+          final story = activity['story'] as Story;
+          final points = activity['points'] as int;
+
+          return Container(
+            width: itemWidth,
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFF0F0F0)),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3, // Give the image more relative space
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _buildCoverImage(story.coverImageUrl, isQuiz),
+                        _buildPointsBadge(points),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(story.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 4),
+                      _buildTag(isQuiz),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCoverImage(String path, bool isQuiz) {
+    final bg = isQuiz ? Colors.orange.shade50 : Colors.grey.shade50;
+    if (path.isEmpty) return Container(color: bg);
+    if (path.startsWith('http')) {
+      return Image.network(path,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(color: bg));
+    }
+    final clean = path.replaceFirst('file:///', '');
+    return Image.asset(clean,
+        fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: bg));
+  }
+
+  Widget _emptySection(String message) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF0F0F0)),
+        ),
+        child: Center(
+          child: Text(
+            message,
+            style: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 13,
+                fontWeight: FontWeight.w500),
+          ),
         ),
       ),
     );
@@ -283,167 +506,36 @@ class ProgressScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 30, 24, 12),
-        child: Text(title,
-            style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: Colors.black)),
-      ),
-    );
-  }
-
-  Widget _buildLevelHeader(int points, LanguageService lang) {
-    double progress = (points % 100) / 100;
-    int level = (points / 100).floor() + 1;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(25),
-          boxShadow: [
-            BoxShadow(color: Colors.purple.withOpacity(0.05), blurRadius: 10)
-          ]),
-      child: Column(children: [
-        Text(lang.translate('level').toUpperCase(),
-            style: const TextStyle(
-                fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-        Text("LEVEL $level",
-            style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: Colors.black)),
-        const SizedBox(height: 15),
-        ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 10,
-                backgroundColor: Colors.grey.shade100,
-                color: Colors.green)),
-        const SizedBox(height: 10),
-        Text("$points TOTAL EXP",
-            style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                color: Colors.black,
-                fontSize: 14)),
-      ]),
-    );
-  }
-
-  Widget _buildHorizontalBadgeList(List<String> earnedIds) {
-    final districtIds = [
-      'J.Bahru',
-      'Muar',
-      'K.Tinggi',
-      'Kulai',
-      'Pontian',
-      'Mersing',
-      'B.Pahat',
-      'Segamat',
-      'Tangkak',
-      'Kluang'
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        double width = constraints.maxWidth;
-        bool isMobile = width <= 600;
-
-        if (!isMobile) {
-          int crossAxisCount = width > 900 ? 10 : 6;
-          return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            itemCount: districtIds.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 0.85,
-            ),
-            itemBuilder: (context, index) => _buildBadgeItem(
-                districtIds[index], earnedIds.length > index, false),
-          );
-        }
-        double itemWidth = (width - 48 - (10 * 3)) / 4;
-
-        return SizedBox(
-          height: 90,
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: districtIds.length,
-            itemBuilder: (context, index) {
-              return Container(
-                width: itemWidth,
-                margin: EdgeInsets.only(
-                    right: index == districtIds.length - 1 ? 0 : 10),
-                child: _buildBadgeItem(
-                    districtIds[index], earnedIds.length > index, true),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildBadgeItem(String name, bool isEarned, bool isMobile) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isEarned ? Colors.white : Colors.white.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: isEarned ? Colors.amber : Colors.white.withOpacity(0.1),
-          width: 2,
+  Widget _buildPointsBadge(int points) {
+    return Positioned(
+      top: 8,
+      right: 8,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(8),
         ),
-        boxShadow: isEarned
-            ? [BoxShadow(color: Colors.amber.withOpacity(0.1), blurRadius: 4)]
-            : [],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.emoji_events,
-            color: isEarned ? Colors.amber : Colors.purple.shade100,
-            size: isMobile ? 24 : 20,
+        child: Text(
+          '$points XP',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
           ),
-          const SizedBox(height: 4),
-          Text(
-            name,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.w900,
-              color: isEarned ? Colors.black87 : Colors.purple.shade200,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildNoResultsView(String message) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(25),
-      decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(25)),
-      child: Center(
-          child: Text(message,
-              style: TextStyle(
-                  color: Colors.purple.shade300,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13))),
+  Widget _buildTag(bool isQuiz) {
+    return Text(
+      isQuiz ? 'Quiz' : 'Story',
+      style: const TextStyle(
+        fontSize: 10,
+        color: Colors.grey,
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 }

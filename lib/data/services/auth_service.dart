@@ -176,12 +176,37 @@ class AuthService extends ChangeNotifier {
             .where('parentId', isEqualTo: parentUid)
             .get();
 
+        // Delete each child's Auth account via Cloud Function first
+        String? idToken = await user.getIdToken();
         for (var childDoc in childrenSnapshot.docs) {
+          final childId = childDoc.id;
+          try {
+            if (idToken != null) {
+              final url =
+                  'https://us-central1-little-johor-explorer-db.cloudfunctions.net/deleteChildAuth';
+              await http.post(
+                Uri.parse(url),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer $idToken',
+                },
+                body: jsonEncode({
+                  "data": {"childUid": childId}
+                }),
+              );
+            }
+          } catch (e) {
+            debugPrint("Failed to delete child auth $childId: $e");
+          }
           await childDoc.reference.delete();
+          await _firestore.collection('progress').doc(childId).delete();
         }
-        await _firestore.collection('users').doc(parentUid).delete();
 
-        // 4. Delete the Parent's Auth account
+        // Delete parent's Firestore doc
+        await _firestore.collection('users').doc(parentUid).delete();
+        await _firestore.collection('progress').doc(parentUid).delete();
+
+        // Delete parent's Auth account
         await user.delete();
 
         _currentUser = null;
@@ -307,19 +332,34 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  void removeChild(String childId) async {
+  Future<void> removeChild(String childId) async {
     if (_currentUser == null) return;
     try {
-      // Delete the child document
-      await _firestore.collection('users').doc(childId).delete();
+      // Call Cloud Function to delete Auth account
+      String? idToken = await _auth.currentUser?.getIdToken();
+      if (idToken != null) {
+        final url =
+            'https://us-central1-little-johor-explorer-db.cloudfunctions.net/deleteChildAuth';
+        await http.post(
+          Uri.parse(url),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $idToken',
+          },
+          body: jsonEncode({
+            "data": {"childUid": childId}
+          }),
+        );
+      }
 
-      // Note: We cannot delete the child's AUTH account from here without
-      // logging in as them or using a Cloud Function.
-      // But we can successfully remove them from the Dashboard.
+      // Delete Firestore documents
+      await _firestore.collection('users').doc(childId).delete();
+      await _firestore.collection('progress').doc(childId).delete();
 
       await _fetchAndSetUser(_currentUser!.id);
+      notifyListeners();
     } catch (e) {
-      debugPrint("Delete failed: $e");
+      debugPrint("Delete child failed: $e");
     }
   }
 

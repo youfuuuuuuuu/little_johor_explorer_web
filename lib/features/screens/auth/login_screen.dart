@@ -98,165 +98,140 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FE),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.deepPurple.shade50,
-              const Color(0xFFF8F9FE),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.deepPurple.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          )
-                        ],
-                      ),
-                      child: const Icon(Icons.auto_stories,
-                          size: 70, color: Colors.deepPurple),
+      backgroundColor: Colors.white, // Pure white for that Threads look
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Minimalist Logo pattern
+                  const Icon(
+                    Icons.auto_stories_rounded,
+                    size: 48,
+                    color: Colors.black,
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'little johor explorer',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black,
+                      letterSpacing: -1.5, // Tight tracking like Threads
                     ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Welcome Explorer!',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.indigo,
-                        letterSpacing: 0.5,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Continue your adventure.',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w400,
                     ),
-                    const SizedBox(height: 40),
-                    Container(
-                      constraints: const BoxConstraints(maxWidth: 500),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
-                            blurRadius: 15,
-                            offset: const Offset(0, 8),
-                          )
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          CustomTextField(
-                            controller: _emailController,
-                            labelText: 'Email',
-                            prefixIcon: const Icon(
-                                Icons.alternate_email_rounded,
-                                color: Colors.deepPurple),
-                            validator: (value) {
-                              if (value == null || value.isEmpty)
-                                return 'Email is required';
-                              if (!value.contains('@'))
-                                return 'Enter a valid email';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          CustomTextField(
-                            controller: _passwordController,
-                            labelText: 'Password',
-                            obscureText: _obscurePassword,
-                            prefixIcon: const Icon(Icons.lock_outline_rounded,
-                                color: Colors.deepPurple),
-                            suffixIcon: IconButton(
-                              icon: Icon(_obscurePassword
-                                  ? Icons.visibility_rounded
-                                  : Icons.visibility_off_rounded),
-                              onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty)
-                                return 'Password is required';
-                              if (value.length < 8)
-                                return 'Minimum 8 characters';
-                              return null;
-                            },
-                          ),
-                          /*Padding(
-                            padding: const EdgeInsets.only(top: 15.0),
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: _handleForgotPassword,
-                                child: const Text(
-                                  "Forgot Password?",
-                                  style: TextStyle(
-                                    color: Colors.deepPurple,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),*/
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    _isLoading
-                        ? const CircularProgressIndicator()
-                        : Container(
-                            constraints: const BoxConstraints(maxWidth: 500),
-                            width: double.infinity,
-                            height: 55,
-                            child: CustomButton(
-                              text: 'START EXPLORING',
-                              onPressed: _handleLogin,
-                            ),
-                          ),
-                    const SizedBox(height: 25),
-                    TextButton(
+                  ),
+                  const SizedBox(height: 48),
+
+                  // Inputs are now flat and spaced
+                  CustomTextField(
+                    controller: _emailController,
+                    labelText: 'email',
+                    // Note: Ensure your CustomTextField supports a minimalist decoration
+                    prefixIcon: const Icon(Icons.alternate_email_rounded,
+                        size: 20, color: Colors.black54),
+                    validator: (value) =>
+                        (value == null || !value.contains('@'))
+                            ? 'Enter a valid email'
+                            : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _passwordController,
+                    labelText: 'password',
+                    obscureText: _obscurePassword,
+                    prefixIcon: const Icon(Icons.lock_outline_rounded,
+                        size: 20, color: Colors.black54),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                          size: 18),
                       onPressed: () =>
-                          Navigator.pushNamed(context, Routes.register),
-                      child: RichText(
-                        text: TextSpan(
-                          style: const TextStyle(
-                              color: Colors.black54, fontSize: 15),
-                          children: [
-                            const TextSpan(text: "New here? "),
-                            TextSpan(
-                              text: "Create Account",
-                              style: TextStyle(
-                                color: Colors.indigo.shade700,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                    validator: (value) => (value == null || value.length < 8)
+                        ? 'Minimum 8 characters'
+                        : null,
+                  ),
+
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _handleForgotPassword,
+                      child: Text(
+                        "Forgot password?",
+                        style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  _isLoading
+                      ? const CircularProgressIndicator(
+                          color: Colors.black, strokeWidth: 2)
+                      : SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: ElevatedButton(
+                            onPressed: _handleLogin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                    16), // High-radius pill
+                              ),
+                            ),
+                            child: const Text(
+                              'Log in',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+
+                  const SizedBox(height: 24),
+
+                  // Footer link
+                  TextButton(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, Routes.register),
+                    child: RichText(
+                      text: const TextSpan(
+                        style: TextStyle(color: Colors.black54, fontSize: 14),
+                        children: [
+                          TextSpan(text: "Don't have an account? "),
+                          TextSpan(
+                            text: "Sign up",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -239,61 +239,74 @@ class _ManageQuizScreenState extends State<ManageQuizScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FE),
-      body: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.orange.shade100.withOpacity(0.5),
-                  const Color(0xFFF8F9FE)
-                ],
+      backgroundColor: Colors.white, // Pure white for that Threads look
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildAppBar(),
+            const Divider(height: 1, color: Color(0xFFEEEEEE)),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+                physics: const BouncingScrollPhysics(),
+                itemCount: _quizControllers.length,
+                itemBuilder: (context, index) => _buildQuestionCard(index),
               ),
             ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildAppBar(),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 120),
-                    itemCount: _quizControllers.length,
-                    itemBuilder: (context, index) => _buildQuestionCard(index),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _buildBottomAction(),
-        ],
+          ],
+        ),
       ),
+      bottomSheet:
+          _buildBottomAction(), // Using bottomSheet for a more fixed "Social Bar" feel
     );
   }
 
   Widget _buildAppBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 10, 24, 10),
+      padding: const EdgeInsets.fromLTRB(8, 12, 16, 12),
       child: Row(
         children: [
           IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.orange)),
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back, color: Colors.black, size: 26),
+          ),
           Expanded(
-              child: Text("Edit Quiz: ${widget.story.title}",
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "manage quiz",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black,
+                    letterSpacing: -1.0,
+                  ),
+                ),
+                Text(
+                  widget.story.title.toLowerCase(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.orange.shade900))),
-          IconButton(
-            icon: Icon(_isPreviewMode ? Icons.edit : Icons.remove_red_eye,
-                color: Colors.orange),
-            onPressed: () => setState(() => _isPreviewMode = !_isPreviewMode),
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          // Clean Toggle Button
+          GestureDetector(
+            onTap: () => setState(() => _isPreviewMode = !_isPreviewMode),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _isPreviewMode ? Colors.black : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                _isPreviewMode ? Icons.edit_rounded : Icons.visibility_rounded,
+                color: _isPreviewMode ? Colors.white : Colors.black,
+                size: 20,
+              ),
+            ),
           )
         ],
       ),
@@ -304,157 +317,196 @@ class _ManageQuizScreenState extends State<ManageQuizScreen> {
     final q = _quizControllers[index];
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.orange.withOpacity(0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 8))
-        ],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: const Color(0xFFEEEEEE), width: 1), // Flat border logic
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("Soalan ${index + 1}",
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "question ${index + 1}",
                   style: const TextStyle(
                       fontWeight: FontWeight.w900,
-                      fontSize: 18,
-                      color: Colors.orange)),
-              IconButton(
+                      fontSize: 16,
+                      letterSpacing: -0.5),
+                ),
+                IconButton(
                   onPressed: () =>
                       setState(() => _quizControllers.removeAt(index)),
-                  icon: const Icon(Icons.delete_outline,
-                      color: Colors.redAccent)),
-            ],
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: Colors.redAccent, size: 22),
+                ),
+              ],
+            ),
           ),
-          const Divider(),
-          _buildTextField(q['questionMs'], 'Soalan (BM)', Icons.help_outline),
-          const SizedBox(height: 12),
-          _buildTextField(
-              q['hintMs'], 'Petunjuk (BM)', Icons.lightbulb_outline),
-          const SizedBox(height: 20),
-          const Text("Gambar Soalan (Optional)",
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey)),
-          const SizedBox(height: 8),
-          ImageUploadBox(
-            imageUrl: q['qImage'],
-            isUploading: q['isUploading'],
-            onTap: () => _onUploadQuestionImage(index),
-            label: "Upload Question Image",
+          const Divider(height: 1, color: Color(0xFFF5F5F5)),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStyledTextField(
+                    q['questionMs'], 'soalan (bm)', Icons.help_outline_rounded),
+                const SizedBox(height: 12),
+                _buildStyledTextField(
+                    q['hintMs'], 'petunjuk', Icons.lightbulb_outline_rounded),
+                const SizedBox(height: 24),
+                const Text("media asset (optional)",
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black54)),
+                const SizedBox(height: 12),
+                ImageUploadBox(
+                  imageUrl: q['qImage'],
+                  isUploading: q['isUploading'],
+                  onTap: () => _onUploadQuestionImage(index),
+                  label: "Upload Image",
+                ),
+                const SizedBox(height: 32),
+                const Text("answer options",
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black54)),
+                const SizedBox(height: 12),
+                ...List.generate(4, (i) => _buildModernOption(index, i)),
+                if (_isPreviewMode) ...[
+                  const SizedBox(height: 20),
+                  _buildReviewResult(index),
+                ]
+              ],
+            ),
           ),
-          const SizedBox(height: 25),
-          const Text("Pilihan Jawapan",
-              style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Colors.indigo)),
-          const Text("Pilih butang bulat untuk menandakan jawapan yang betul.",
-              style: TextStyle(fontSize: 11, color: Colors.grey)),
-          const SizedBox(height: 10),
-          ...List.generate(4, (i) {
-            bool isCorrect = q['correctIndex'] == i;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: isCorrect ? Colors.green.shade50 : Colors.transparent,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(
-                    color: isCorrect
-                        ? Colors.green.shade300
-                        : Colors.grey.shade200,
-                    width: isCorrect ? 2 : 1),
-              ),
-              child: Row(
-                children: [
-                  Radio<int>(
-                    value: i,
-                    groupValue: q['correctIndex'],
-                    activeColor: Colors.green,
-                    onChanged: (int? value) => setState(() {
-                      q['correctIndex'] = value;
-                      q['userSelectedIndex'] = value;
-                    }),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: q['answersMs'][i],
-                      decoration: const InputDecoration(
-                          hintText: "Pilihan",
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10)),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-          if (_isPreviewMode) ...[
-            const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10), child: Divider()),
-            _buildReviewResult(index),
-          ]
         ],
       ),
     );
   }
 
-  Widget _buildTextField(
+  Widget _buildModernOption(int qIndex, int optionIndex) {
+    final q = _quizControllers[qIndex];
+    bool isSelected = q['correctIndex'] == optionIndex;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.black : const Color(0xFFFAFAFA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: isSelected ? Colors.black : const Color(0xFFEEEEEE)),
+      ),
+      child: Row(
+        children: [
+          Radio<int>(
+            value: optionIndex,
+            groupValue: q['correctIndex'],
+            activeColor: Colors.white, // Inverted for selected state
+            onChanged: (int? value) => setState(() {
+              q['correctIndex'] = value;
+              q['userSelectedIndex'] = value;
+            }),
+          ),
+          Expanded(
+            child: TextField(
+              controller: q['answersMs'][optionIndex],
+              style: TextStyle(
+                  fontSize: 14,
+                  color: isSelected ? Colors.white : Colors.black,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400),
+              decoration: const InputDecoration(
+                hintText: "Enter option...",
+                hintStyle: TextStyle(color: Colors.grey),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStyledTextField(
       TextEditingController controller, String label, IconData icon) {
     return TextField(
       controller: controller,
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, size: 18, color: Colors.orange),
+        labelStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+        prefixIcon: Icon(icon, size: 18, color: Colors.black),
         filled: true,
-        fillColor: Colors.orange.withOpacity(0.03),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none),
+        fillColor: const Color(0xFFFAFAFA),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black, width: 1),
+        ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
 
   Widget _buildBottomAction() {
-    return Positioned(
-      bottom: 20,
-      left: 24,
-      right: 24,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
+      ),
       child: Row(
         children: [
           Expanded(
             child: SizedBox(
-              height: _btnHeight,
-              child: ElevatedButton.icon(
+              height: 54,
+              child: OutlinedButton.icon(
                 onPressed: () => _addQuizField(),
-                icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text("Add Question", style: _btnTextStyle),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange.shade400,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(_btnRadius))),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text("add question",
+                    style: TextStyle(fontWeight: FontWeight.w800)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.black,
+                  side: const BorderSide(color: Color(0xFFEEEEEE)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 12),
           Expanded(
             child: _isSaving
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: CircularProgressIndicator(
+                        color: Colors.black, strokeWidth: 2))
                 : SizedBox(
-                    height: _btnHeight,
-                    child: CustomButton(
-                        text: "Save Changes", onPressed: _saveQuiz)),
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: _saveQuiz,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text("save changes",
+                          style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ),
           ),
         ],
       ),

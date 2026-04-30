@@ -18,7 +18,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final List<String> _selectedThemes = [];
   final List<String> _selectedDistricts = [];
   bool _isSortingMode = false;
-
   List<Story> _sortableStories = [];
 
   final List<String> _themes = ['History', 'Place', 'Food'];
@@ -51,7 +50,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           storyTitle.contains(_searchQuery.toLowerCase());
       bool themeMatch = _selectedThemes.isEmpty ||
           _selectedThemes.any((t) => storyTags.contains(t.toLowerCase()));
-
       bool districtMatch = _selectedDistricts.isEmpty ||
           _selectedDistricts.any((d) {
             String targetWithDash = d.toLowerCase().replaceAll(' ', '-');
@@ -65,78 +63,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     bool isFiltering = _searchQuery.isNotEmpty ||
         _selectedThemes.isNotEmpty ||
         _selectedDistricts.isNotEmpty;
-
     final displayList = _isSortingMode ? _sortableStories : filteredStories;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F7FA),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 24, 10),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.arrow_back_ios_new_rounded,
-                        color: Colors.blueGrey.shade800, size: 20),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    "Admin Panel",
-                    style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.blueGrey.shade800),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _isSortingMode = !_isSortingMode;
-                        if (_isSortingMode) {
-                          _searchQuery = '';
-                          _selectedThemes.clear();
-                          _selectedDistricts.clear();
-                          _sortableStories = List<Story>.from(
-                              Provider.of<StoryService>(context, listen: false)
-                                  .stories);
-                        } else {
-                          _sortableStories = [];
-                        }
-                      });
-                    },
-                    icon: Icon(
-                        _isSortingMode
-                            ? Icons.check_circle_rounded
-                            : Icons.sort_rounded,
-                        color: _isSortingMode
-                            ? Colors.green
-                            : Colors.lightBlue.shade700,
-                        size: 22),
-                    style: IconButton.styleFrom(
-                        backgroundColor: Colors.white, elevation: 1),
-                  ),
-                ],
-              ),
-            ),
+            _buildTopBar(storyService),
             _buildSearchAndFilterBar(),
             if (_selectedThemes.isNotEmpty || _selectedDistricts.isNotEmpty)
               _buildActiveFilterChips(lang),
-            if (_isSortingMode && isFiltering)
+            if (_isSortingMode)
               _buildStatusBanner(
-                  "Sorting disabled while filters are active.", Colors.orange),
-            if (_isSortingMode && !isFiltering)
-              _buildStatusBanner(
-                  "Hold and drag the handle on the right to reorder.",
-                  Colors.lightBlue),
+                isFiltering
+                    ? "sorting disabled during filter"
+                    : "drag handle to reorder",
+                isFiltering ? Colors.orange : Colors.black54,
+              ),
             Expanded(
               child: storyService.isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      child: CircularProgressIndicator(
+                          color: Colors.black, strokeWidth: 2))
                   : ReorderableListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                       itemCount: displayList.length,
                       buildDefaultDragHandles: _isSortingMode && !isFiltering,
                       onReorder: (oldIndex, newIndex) {
@@ -145,9 +96,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           final movedItem = _sortableStories.removeAt(oldIndex);
                           _sortableStories.insert(newIndex, movedItem);
                         });
-                        Provider.of<StoryService>(context, listen: false)
-                            .updateStoriesOrder(
-                                List<Story>.from(_sortableStories));
+                        storyService.updateStoriesOrder(
+                            List<Story>.from(_sortableStories));
                       },
                       itemBuilder: (context, index) {
                         return _buildAdminCard(
@@ -163,36 +113,82 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // --- UI Helper Methods (Inside the State Class) ---
+
+  Widget _buildTopBar(StoryService storyService) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 12, 24, 12),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black, size: 26),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 4),
+          const Text(
+            "admin panel",
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: Colors.black,
+              letterSpacing: -1.2,
+            ),
+          ),
+          const Spacer(),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isSortingMode = !_isSortingMode;
+                if (_isSortingMode) {
+                  _searchQuery = '';
+                  _selectedThemes.clear();
+                  _selectedDistricts.clear();
+                  _sortableStories = List<Story>.from(storyService.stories);
+                }
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _isSortingMode ? Colors.black : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFEEEEEE)),
+              ),
+              child: Icon(
+                _isSortingMode ? Icons.check_rounded : Icons.sort_rounded,
+                color: _isSortingMode ? Colors.white : Colors.black,
+                size: 20,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSearchAndFilterBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Row(
         children: [
           Expanded(
             child: Container(
-              height: 46,
+              height: 44,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(23),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4))
-                ],
+                color: const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: TextField(
-                onChanged: (v) {
-                  setState(() {
-                    _searchQuery = v;
-                    if (v.isNotEmpty) _isSortingMode = false;
-                  });
-                },
+                onChanged: (v) => setState(() {
+                  _searchQuery = v;
+                  if (v.isNotEmpty) _isSortingMode = false;
+                }),
                 style: const TextStyle(fontSize: 14),
                 decoration: const InputDecoration(
-                  hintText: "Search stories...",
-                  prefixIcon: Icon(Icons.search_rounded,
-                      color: Colors.lightBlue, size: 20),
+                  hintText: "search content...",
+                  hintStyle: TextStyle(color: Colors.grey),
+                  prefixIcon:
+                      Icon(Icons.search, color: Colors.black54, size: 18),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(vertical: 10),
                 ),
@@ -200,14 +196,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          IconButton(
-            onPressed: _showFilterDialog,
-            icon: const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.lightBlue.shade400,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15)),
-              padding: const EdgeInsets.all(12),
+          GestureDetector(
+            onTap: _showFilterDialog,
+            child: Container(
+              height: 44,
+              width: 44,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child:
+                  const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
             ),
           ),
         ],
@@ -242,7 +241,145 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
         onDeleted: onDeleted,
         backgroundColor: color.withOpacity(0.1),
-        shape: StadiumBorder(side: BorderSide(color: color.withOpacity(0.2))),
+        shape: const StadiumBorder(side: BorderSide(color: Colors.transparent)),
+      ),
+    );
+  }
+
+  Widget _buildAdminCard(Story story, bool isFiltering, StoryService service) {
+    return Container(
+      key: ValueKey(story.id),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEEEEEE), width: 1),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        leading: _isSortingMode && !isFiltering
+            ? const Icon(Icons.drag_handle_rounded, color: Colors.black26)
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  color: const Color(0xFFF5F5F5),
+                  child: story.coverImageUrl.startsWith('http')
+                      ? Image.network(story.coverImageUrl, fit: BoxFit.cover)
+                      : const Icon(Icons.image_outlined,
+                          color: Colors.grey, size: 20),
+                ),
+              ),
+        title: Text(
+          story.title ?? "untitled",
+          style: const TextStyle(
+              fontWeight: FontWeight.w800, fontSize: 15, color: Colors.black),
+        ),
+        subtitle: Text(
+          "#${story.tags?.join(' #').toLowerCase()}",
+          style: TextStyle(
+              color: Colors.grey.shade400,
+              fontSize: 10,
+              fontWeight: FontWeight.w500),
+        ),
+        trailing: _isSortingMode
+            ? null
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _actionIcon(
+                      Icons.quiz_outlined,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => ManageQuizScreen(story: story)))),
+                  const SizedBox(width: 8),
+                  _actionIcon(
+                      Icons.edit_outlined,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  ManageStoryScreen(existingStory: story)))),
+                  const SizedBox(width: 8),
+                  _actionIcon(Icons.delete_outline_rounded,
+                      () => _confirmDelete(context, story.id, service),
+                      isDestructive: true),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _actionIcon(IconData icon, VoidCallback onTap,
+      {bool isDestructive = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color:
+              isDestructive ? const Color(0xFFFFEBEB) : const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon,
+            color: isDestructive ? Colors.red : Colors.black, size: 18),
+      ),
+    );
+  }
+
+  Widget _buildDualFab(StoryService storyService) {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _fabPart("quiz", Icons.add_task_rounded,
+              () => _showStoryPickerForQuiz(context, storyService.stories)),
+          Container(width: 1, height: 20, color: Colors.white24),
+          _fabPart(
+              "story",
+              Icons.add_rounded,
+              () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => ManageStoryScreen(
+                          nextOrderIndex: storyService.stories.length)))),
+        ],
+      ),
+    );
+  }
+
+  Widget _fabPart(String label, IconData icon, VoidCallback onTap) {
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, color: Colors.white, size: 20),
+      label: Text(label.toLowerCase(),
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w800)),
+    );
+  }
+
+  Widget _buildStatusBanner(String text, Color color) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text.toLowerCase(),
+        textAlign: TextAlign.center,
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -262,11 +399,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Filters",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.blueGrey.shade800)),
+              const Text("Filters",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
               const SizedBox(height: 20),
               const Text("Themes",
                   style: TextStyle(
@@ -278,46 +412,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 spacing: 8,
                 children: _themes
                     .map((t) => FilterChip(
-                          label: Text(lang.translate(t.toLowerCase()),
-                              style: const TextStyle(fontSize: 12)),
+                          label: Text(lang.translate(t.toLowerCase())),
                           selected: _selectedThemes.contains(t),
-                          selectedColor: Colors.orange.shade50,
-                          checkmarkColor: Colors.orange,
                           onSelected: (val) {
                             setState(() {
                               val
                                   ? _selectedThemes.add(t)
                                   : _selectedThemes.remove(t);
                               if (_selectedThemes.isNotEmpty)
-                                _isSortingMode = false;
-                            });
-                            setDialogState(() {});
-                          },
-                        ))
-                    .toList(),
-              ),
-              const SizedBox(height: 20),
-              const Text("Districts",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                      fontSize: 12)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _districts
-                    .map((d) => FilterChip(
-                          label: Text(d, style: const TextStyle(fontSize: 12)),
-                          selected: _selectedDistricts.contains(d),
-                          selectedColor: Colors.lightBlue.shade50,
-                          checkmarkColor: Colors.lightBlue,
-                          onSelected: (val) {
-                            setState(() {
-                              val
-                                  ? _selectedDistricts.add(d)
-                                  : _selectedDistricts.remove(d);
-                              if (_selectedDistricts.isNotEmpty)
                                 _isSortingMode = false;
                             });
                             setDialogState(() {});
@@ -332,191 +434,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.lightBlue.shade400,
-                      shape: const StadiumBorder(),
-                      elevation: 0),
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: const StadiumBorder()),
                   child: const Text("Apply",
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
-              const SizedBox(height: 20),
             ],
           ),
         );
       }),
-    );
-  }
-
-  Widget _buildAdminCard(Story story, bool isFiltering, StoryService service) {
-    return Container(
-      key: ValueKey(story.id),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 4))
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: _isSortingMode && !isFiltering
-            ? const Icon(Icons.drag_indicator, color: Colors.grey)
-            : Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Colors.grey[200],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: story.coverImageUrl.startsWith('http')
-                      ? Image.network(
-                          story.coverImageUrl,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, progress) =>
-                              progress == null
-                                  ? child
-                                  : const Center(
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2)),
-                          errorBuilder: (context, e, s) => const Icon(
-                              Icons.broken_image,
-                              color: Colors.grey),
-                        )
-                      : Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                              color: Colors.lightBlue.shade50,
-                              shape: BoxShape.circle),
-                          child: Icon(Icons.menu_book_rounded,
-                              color: Colors.lightBlue.shade400, size: 20),
-                        ),
-                ),
-              ),
-        title: Text(story.title ?? "Untitled",
-            style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: Colors.blueGrey.shade800)),
-        subtitle: Text("#${story.tags?.join(' #').toUpperCase()}",
-            style: TextStyle(
-                color: Colors.lightBlue.shade300,
-                fontSize: 9,
-                fontWeight: FontWeight.bold)),
-        trailing: _isSortingMode
-            ? null
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _circleAction(
-                      Icons.quiz_rounded,
-                      Colors.orange,
-                      () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => ManageQuizScreen(story: story)))),
-                  const SizedBox(width: 8),
-                  _circleAction(
-                      Icons.edit_rounded,
-                      Colors.blue,
-                      () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  ManageStoryScreen(existingStory: story)))),
-                  const SizedBox(width: 8),
-                  _circleAction(Icons.delete_outline_rounded, Colors.redAccent,
-                      () => _confirmDelete(context, story.id, service)),
-                ],
-              ),
-      ),
-    );
-  }
-
-  Widget _circleAction(IconData icon, Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-            color: color.withOpacity(0.08), shape: BoxShape.circle),
-        child: Icon(icon, color: color, size: 18),
-      ),
-    );
-  }
-
-  Widget _buildStatusBanner(String text, Color color) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 5),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.1))),
-      child: Text(text,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _buildDualFab(StoryService storyService) {
-    return Container(
-      height: 54,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(27),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 5))
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextButton.icon(
-            onPressed: () =>
-                _showStoryPickerForQuiz(context, storyService.stories),
-            icon: const Icon(Icons.add_task_rounded,
-                color: Colors.orange, size: 20),
-            label: const Text("Quiz",
-                style: TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13)),
-          ),
-          Container(
-              width: 1,
-              height: 24,
-              color: Colors.grey.shade200,
-              margin: const EdgeInsets.symmetric(horizontal: 8)),
-          TextButton.icon(
-            onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => ManageStoryScreen(
-                        nextOrderIndex: storyService.stories.length))),
-            icon: Icon(Icons.add_rounded,
-                color: Colors.lightBlue.shade600, size: 22),
-            label: Text("Story",
-                style: TextStyle(
-                    color: Colors.lightBlue.shade600,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -530,18 +458,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Text("Select Story",
-                style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.blueGrey.shade800)),
+            const Text("Select Story",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
             const SizedBox(height: 16),
             Expanded(
               child: ListView.builder(
                 itemCount: stories.length,
                 itemBuilder: (context, index) => ListTile(
-                  leading: const Icon(Icons.quiz_rounded,
-                      color: Colors.orange, size: 20),
+                  leading: const Icon(Icons.quiz_rounded, color: Colors.orange),
                   title: Text(stories[index].title,
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w600)),
@@ -582,11 +506,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
-                shape: const StadiumBorder(),
+                foregroundColor: Colors.white,
                 elevation: 0),
             child: const Text('Delete',
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold)),
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

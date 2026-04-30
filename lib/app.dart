@@ -7,6 +7,8 @@ import 'package:little_johor_explorer/features/screens/ai_features/chat_with_his
 import 'package:little_johor_explorer/features/screens/family/family_chat_screen.dart';
 import 'package:little_johor_explorer/features/screens/profile/profile_screen.dart';
 import 'package:little_johor_explorer/features/screens/home/category_quiz_screen.dart';
+import 'package:little_johor_explorer/features/screens/home/progress_screen.dart';
+import 'package:little_johor_explorer/features/screens/parent/parent_dashboard.dart';
 import 'package:little_johor_explorer/core/constants/routes.dart';
 import 'core/routing/auth_wrapper.dart';
 
@@ -29,8 +31,6 @@ class LittleJohorExplorerApp extends StatelessWidget {
         ),
       ),
       home: const AuthWrapper(),
-
-      // Keep your named routes so you can still use Navigator.pushNamed elsewhere
       routes: {
         Routes.login: (context) => const LoginScreen(),
         Routes.register: (context) => const RegisterScreen(),
@@ -40,6 +40,8 @@ class LittleJohorExplorerApp extends StatelessWidget {
         Routes.aiChat: (context) => const ChatWithHistoryScreen(),
         Routes.familyHub: (context) => const FamilyChatScreen(),
         Routes.profile: (context) => ProfileScreen(),
+        Routes.parentDashboard: (context) => const ParentDashboard(),
+        Routes.progress: (context) => const ProgressScreen(),
       },
     );
   }

@@ -11,6 +11,7 @@ import 'package:little_johor_explorer/data/services/story_service.dart';
 import 'package:little_johor_explorer/data/services/gemini_service.dart';
 import 'package:little_johor_explorer/data/services/language_service.dart';
 import 'package:little_johor_explorer/data/services/chat_service.dart';
+import 'package:little_johor_explorer/data/services/progress_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +45,7 @@ void main() async {
           ChangeNotifierProvider.value(value: storyService),
           ChangeNotifierProvider.value(value: geminiService),
           ChangeNotifierProvider.value(value: languageService),
+          ChangeNotifierProvider(create: (_) => ProgressService()),
           Provider.value(value: chatService),
         ],
         child: const LittleJohorExplorerApp(),

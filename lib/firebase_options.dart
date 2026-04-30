@@ -47,7 +47,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1016498515081',
     projectId: 'little-johor-explorer-db',
     storageBucket: 'little-johor-explorer-db.firebasestorage.app',
-    iosBundleId: 'com.example.littleJohorExplorer',
+    iosBundleId: 'com.littlejohorexplorer.app',
   );
 
   static FirebaseOptions get macos => ios;

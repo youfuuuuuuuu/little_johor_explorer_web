@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../data/services/auth_service.dart';
 import 'package:little_johor_explorer/data/services/language_service.dart';
-import 'package:little_johor_explorer/data/services/local_storage_service.dart';
 import 'package:little_johor_explorer/data/models/user.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ParentDashboard extends StatefulWidget {
   const ParentDashboard({super.key});
@@ -36,20 +36,27 @@ class _ParentDashboardState extends State<ParentDashboard> {
     }
   }
 
-  Map<String, dynamic> _getRealTimeStats(
-      LocalStorageService storage, String? childId) {
-    if (childId == null)
-      return {'stories': 0, 'quizzes': 0, 'badges': 0, 'screenTimeMins': 0};
-    final history = storage.getHistoryForUser(childId);
-    int quizCount = history
-        .where((item) => item.contains("Quiz:") || item.contains("Earned"))
-        .length;
-    return {
-      'stories': storage.getReadStoryIdsForUser(childId).length,
-      'quizzes': quizCount,
-      'badges': storage.getEarnedBadgeIdsForUser(childId).length,
-      'screenTimeMins': storage.getTotalReadingTimeForUser(childId),
-    };
+  Stream<Map<String, dynamic>> _watchChildStats(String childId) {
+    return FirebaseFirestore.instance
+        .collection('progress')
+        .doc(childId)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists) {
+        return {'stories': 0, 'quizzes': 0, 'badges': 0, 'screenTimeMins': 0};
+      }
+      final data = doc.data()!;
+      final history = List<String>.from(data['history'] ?? []);
+      int quizCount = history
+          .where((item) => item.contains("Quiz:") || item.contains("Earned"))
+          .length;
+      return {
+        'stories': (data['readStoryIds'] as List?)?.length ?? 0,
+        'quizzes': quizCount,
+        'badges': (data['earnedBadgeIds'] as List?)?.length ?? 0,
+        'screenTimeMins': data['totalReadingTime'] ?? 0,
+      };
+    });
   }
 
   void _showError(BuildContext context, String message) {
@@ -70,109 +77,108 @@ class _ParentDashboardState extends State<ParentDashboard> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context);
     final lang = Provider.of<LanguageService>(context);
-    final storage = Provider.of<LocalStorageService>(context);
 
     final user = auth.currentUser;
     if (user == null || user.role != 'parent' || user is! ParentProfile) {
       return const Scaffold(
-          body: Center(child: Text("Loading Parent Data...")));
+          backgroundColor: Colors.white,
+          body: Center(
+              child: CircularProgressIndicator(
+                  color: Colors.black, strokeWidth: 2)));
     }
 
     final children = user.children;
 
     return Scaffold(
-      body: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.purple.shade100.withOpacity(0.5),
-                  const Color(0xFFF8F9FE)
-                ],
-              ),
+      backgroundColor: Colors.white, // Threads-style clean background
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(children.length, lang, auth),
+            const Divider(
+                height: 1, color: Color(0xFFEEEEEE)), // Sharp separation
+            Expanded(
+              child: children.isEmpty
+                  ? _buildEmptyState(lang)
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: children.length,
+                      itemBuilder: (context, index) =>
+                          _buildChildCard(children[index], lang, auth),
+                    ),
             ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(children.length, lang, auth),
-                Expanded(
-                  child: children.isEmpty
-                      ? _buildEmptyState(lang)
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 10),
-                          itemCount: children.length,
-                          itemBuilder: (context, index) => _buildChildCard(
-                              children[index],
-                              _getRealTimeStats(storage, children[index].id),
-                              lang,
-                              auth),
-                        ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader(int count, LanguageService lang, AuthService auth) {
-    // Access children list from the parent profile to check length
     final user = auth.currentUser as ParentProfile;
     final children = user.children;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 24, 20),
+      padding: const EdgeInsets.fromLTRB(
+          8, 12, 24, 12), // Adjusted for social alignment
       child: Row(
         children: [
+          // Minimalist Back Trigger
           IconButton(
             onPressed: () => Navigator.maybePop(context),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.black),
+            icon: const Icon(Icons.arrow_back, color: Colors.black, size: 26),
           ),
+          const SizedBox(width: 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(lang.translate('parent_control'),
-                    style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black)),
                 Text(
-                    "${lang.translate('total_linked_children')}: $count / 5", // Added /5 for clarity
-                    style: const TextStyle(
-                        color: Colors.black54, fontWeight: FontWeight.w500)),
+                  lang.translate('parent_control'),
+                  style: const TextStyle(
+                    fontSize: 24, // Slightly larger
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black,
+                    letterSpacing: -1.2, // Compressed for modern look
+                  ),
+                ),
+                Text(
+                  "${lang.translate('total_linked_children')}: $count / 5"
+                      .toLowerCase(),
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: -0.2,
+                  ),
+                ),
               ],
             ),
           ),
-          ElevatedButton.icon(
-            onPressed: () {
-              // ⭐️ INTEGRATED LIMIT CHECK
+          // Modern Floating Action Pill
+          GestureDetector(
+            onTap: () {
               if (children.length >= 5) {
                 _showError(
-                    context,
-                    lang.currentLanguage == 'ms'
-                        ? "Maksimum 5 akaun kanak-kanak sahaja."
-                        : "Maximum 5 children allowed per account.");
+                  context,
+                  lang.currentLanguage == 'ms'
+                      ? "Limit dicapai."
+                      : "Limit reached.",
+                );
               } else {
                 _showAddChildDialog(context, auth, lang);
               }
             },
-            icon: const Icon(Icons.person_add_rounded, size: 18),
-            label: Text(lang.translate('add_child'),
-                style:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFAB47BC),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15)),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child:
+                  const Icon(Icons.add_rounded, color: Colors.white, size: 22),
             ),
           ),
         ],
@@ -180,115 +186,154 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
-  Widget _buildChildCard(ChildProfile child, Map<String, dynamic> stats,
-      LanguageService lang, AuthService auth) {
+  Widget _buildChildCard(
+      ChildProfile child, LanguageService lang, AuthService auth) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(25),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.purple.withOpacity(0.05),
-                blurRadius: 15,
-                offset: const Offset(0, 8))
-          ]),
-      child: ExpansionTile(
-        shape: const RoundedRectangleBorder(side: BorderSide.none),
-        tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: CircleAvatar(
-            radius: 25,
-            backgroundColor: Colors.purple.shade50,
-            backgroundImage: child.avatarUrl != null
-                ? AssetImage(child.avatarUrl!.replaceFirst('file:///', ''))
-                : null,
-            child: child.avatarUrl == null
-                ? const Icon(Icons.face_rounded, color: Colors.purple)
-                : null),
-        title: Text(child.name,
-            style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 18,
-                color: Colors.black)),
-        subtitle: Text(
-            lang.currentLanguage == 'ms' ? "Lihat Aktiviti" : "View Activity",
-            style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        children: [
-          const Divider(indent: 20, endIndent: 20),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(children: [
-              Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-                _statItem(Icons.auto_stories_rounded, "${stats['stories']}",
-                    lang.translate('stories_label'), Colors.blue),
-                _statItem(Icons.extension_rounded, "${stats['quizzes']}",
-                    lang.translate('quiz'), Colors.orange),
-                _statItem(
-                    Icons.timer_rounded,
-                    _formatScreenTime(stats['screenTimeMins'], lang),
-                    lang.translate('time'),
-                    Colors.green),
-              ]),
-              const SizedBox(height: 20),
-              Row(children: [
-                Expanded(
-                    child: OutlinedButton.icon(
-                        onPressed: () =>
-                            _showEditDialog(context, auth, child, lang),
-                        icon: const Icon(Icons.edit_rounded,
-                            size: 18, color: Colors.black),
-                        label: Text(lang.translate('edit'),
-                            style: const TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold)),
-                        style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.purple.shade100),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12))))),
-                const SizedBox(width: 10),
-                IconButton(
-                    onPressed: () => _confirmDelete(
-                        context, auth, child.id, child.name, lang),
-                    icon: const Icon(Icons.delete_outline_rounded,
-                        color: Colors.redAccent),
-                    style: IconButton.styleFrom(
-                        backgroundColor: Colors.red.shade50,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)))),
-              ]),
-            ]),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: const Color(0xFFF0F0F0), width: 1), // Flat border logic
+      ),
+      child: StreamBuilder<Map<String, dynamic>>(
+        stream: _watchChildStats(child.id),
+        builder: (context, snapshot) {
+          final stats = snapshot.data ??
+              {'stories': 0, 'quizzes': 0, 'screenTimeMins': 0};
+
+          return Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: Container(
+                padding: const EdgeInsets.all(1.5),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: Colors.black, width: 1.5), // Meta avatar style
+                ),
+                child: CircleAvatar(
+                  radius: 24,
+                  backgroundColor: const Color(0xFFF5F5F5),
+                  backgroundImage: child.avatarUrl != null
+                      ? AssetImage(
+                          child.avatarUrl!.replaceFirst('file:///', ''))
+                      : null,
+                ),
+              ),
+              title: Text(
+                child.name,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 17,
+                    letterSpacing: -0.3),
+              ),
+              subtitle: Text(
+                "view activity stats",
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade400,
+                    fontWeight: FontWeight.w400),
+              ),
+              children: [
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _statItem(
+                              "${stats['stories']}", "read", Colors.black),
+                          _statItem(
+                              "${stats['quizzes']}", "quiz", Colors.black),
+                          _statItem(
+                              _formatScreenTime(stats['screenTimeMins'], lang),
+                              "time",
+                              Colors.black),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () =>
+                                  _showEditDialog(context, auth, child, lang),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFF5F5F5),
+                                foregroundColor: Colors.black,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text("Edit profile",
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            onPressed: () => _confirmDelete(
+                                context, auth, child.id, child.name, lang),
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                color: Colors.redAccent, size: 20),
+                            style: IconButton.styleFrom(
+                                backgroundColor: Colors.red.withOpacity(0.05)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _statItem(IconData icon, String value, String label, Color color) {
-    return Column(children: [
-      Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-              color: color.withOpacity(0.1), shape: BoxShape.circle),
-          child: Icon(icon, size: 20, color: color)),
-      const SizedBox(height: 8),
-      Text(value,
-          style: const TextStyle(
-              fontWeight: FontWeight.w900, fontSize: 16, color: Colors.black)),
-      Text(label,
-          style: const TextStyle(
-              fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-    ]);
+  Widget _statItem(String value, String label, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+              color: color,
+              letterSpacing: -0.5),
+        ),
+        Text(
+          label.toLowerCase(),
+          style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey.shade400,
+              fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
   }
 
   Widget _buildEmptyState(LanguageService lang) {
     return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Icon(Icons.family_restroom_rounded,
-          size: 80, color: Colors.purple.withOpacity(0.2)),
+      Icon(Icons.face_retouching_natural_rounded, // More modern icon
+          size: 64,
+          color: Colors.grey.shade200),
       const SizedBox(height: 16),
-      Text(lang.translate('no_childs'),
-          style:
-              const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))
+      Text(lang.translate('no_childs').toLowerCase(),
+          style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade400,
+              letterSpacing: -0.2)),
     ]));
   }
 
@@ -426,17 +471,28 @@ class _ParentDashboardState extends State<ParentDashboard> {
                       }
                     },
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFAB47BC),
-                  foregroundColor: Colors.white,
-                  shape: const StadiumBorder()),
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                disabledBackgroundColor: Colors.grey.shade300,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
               child: isSaving
                   ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : Text(lang.translate('create')),
-            ),
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      lang.translate('create').toLowerCase(),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+            )
           ],
         ),
       ),
@@ -568,17 +624,28 @@ class _ParentDashboardState extends State<ParentDashboard> {
                       }
                     },
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFAB47BC),
-                  foregroundColor: Colors.white,
-                  shape: const StadiumBorder()),
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                disabledBackgroundColor: Colors.grey.shade300,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
               child: isSaving
                   ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : Text(lang.translate('save')),
-            ),
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      lang.translate('save').toLowerCase(),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+            )
           ],
         ),
       ),
@@ -589,46 +656,58 @@ class _ParentDashboardState extends State<ParentDashboard> {
       {required String title, required List<Widget> children}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.purple.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4))
-          ]),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF0F0F0), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title.toLowerCase(),
             style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                color: Colors.black)),
-        const SizedBox(height: 15),
-        ...children,
-      ]),
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: Colors.black54,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
     );
   }
 
-  Widget _buildStyledField(
-      {required TextEditingController controller,
-      required String label,
-      required IconData icon}) {
+  Widget _buildStyledField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
     return TextField(
       controller: controller,
-      style: const TextStyle(fontSize: 14, color: Colors.black),
+      style: const TextStyle(
+          fontSize: 15, color: Colors.black, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
-          prefixIcon: Icon(icon, color: Colors.black, size: 20),
-          filled: true,
-          fillColor: Colors.purple.shade50.withOpacity(0.3),
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide.none),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+        prefixIcon: Icon(icon, color: Colors.black, size: 18),
+        filled: true,
+        fillColor:
+            const Color(0xFFFAFAFA), // Neutral light gray instead of purple
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black, width: 1),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
     );
   }
 
@@ -638,23 +717,40 @@ class _ParentDashboardState extends State<ParentDashboard> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-          color: Colors.grey.shade100, borderRadius: BorderRadius.circular(15)),
-      child: Row(children: [
-        Icon(icon, size: 18, color: Colors.black),
-        const SizedBox(width: 12),
-        Expanded(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label,
-                style: const TextStyle(
+        color: const Color(0xFFF5F5F5), // Flat neutral background
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey.shade600),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toLowerCase(),
+                  style: TextStyle(
                     fontSize: 10,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.bold)),
-            Text(value,
-                style: const TextStyle(fontSize: 14, color: Colors.black)),
-          ]),
-        ),
-      ]),
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -663,24 +759,34 @@ class _ParentDashboardState extends State<ParentDashboard> {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      style: const TextStyle(fontSize: 14, color: Colors.black),
+      style: const TextStyle(
+          fontSize: 15, color: Colors.black, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
-          prefixIcon:
-              const Icon(Icons.lock_outline, color: Colors.black, size: 20),
-          suffixIcon: IconButton(
-              icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
-                  size: 20),
-              onPressed: onToggle,
-              color: Colors.grey),
-          filled: true,
-          fillColor: Colors.purple.shade50.withOpacity(0.3),
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide.none),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+        prefixIcon: const Icon(Icons.lock_outline_rounded,
+            color: Colors.black, size: 18),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+            size: 18,
+            color: Colors.grey.shade400,
+          ),
+          onPressed: onToggle,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFFAFAFA),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black, width: 1),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
     );
   }
 
@@ -689,22 +795,35 @@ class _ParentDashboardState extends State<ParentDashboard> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      elevation: 0,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(lang.translate('select_avatar'),
+          // Drag handle for that native feel
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          Text(lang.translate('select_avatar').toLowerCase(),
               style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: Colors.black)),
-          const SizedBox(height: 20),
+                  color: Colors.black,
+                  letterSpacing: -0.5)),
+          const SizedBox(height: 24),
           Flexible(
             child: GridView.builder(
               shrinkWrap: true,
+              physics: const BouncingScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4, mainAxisSpacing: 15, crossAxisSpacing: 15),
+                  crossAxisCount: 4, mainAxisSpacing: 16, crossAxisSpacing: 16),
               itemCount: _zooAvatars.length,
               itemBuilder: (ctx, index) => GestureDetector(
                 onTap: () {
@@ -715,7 +834,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border:
-                          Border.all(color: Colors.purple.shade100, width: 2)),
+                          Border.all(color: const Color(0xFFF0F0F0), width: 1)),
                   child: ClipOval(
                       child:
                           Image.asset(_zooAvatars[index], fit: BoxFit.cover)),
@@ -723,6 +842,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
               ),
             ),
           ),
+          const SizedBox(height: 20),
         ]),
       ),
     );
@@ -733,28 +853,36 @@ class _ParentDashboardState extends State<ParentDashboard> {
     showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
+                  borderRadius: BorderRadius.circular(24)),
               title: Text(lang.translate('remove_child_title'),
                   style: const TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold)),
-              content: Text("${lang.translate('remove_child_msg')} ($name)",
-                  style: const TextStyle(color: Colors.black87)),
+                      color: Colors.black, fontWeight: FontWeight.w900)),
+              content: Text("${lang.translate('remove_child_msg')} ($name)?",
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: Text(lang.translate('cancel'),
-                        style: const TextStyle(color: Colors.grey))),
+                    child: Text(lang.translate('cancel').toLowerCase(),
+                        style: const TextStyle(
+                            color: Colors.black45,
+                            fontWeight: FontWeight.w700))),
                 ElevatedButton(
                     onPressed: () {
                       auth.removeChild(id);
                       Navigator.pop(ctx);
                     },
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        shape: const StadiumBorder()),
-                    child: Text(lang.translate('remove'),
-                        style: const TextStyle(color: Colors.white))),
+                        backgroundColor:
+                            const Color(0xFFFF3B30), // iOS/Insta style Red
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12))),
+                    child: Text(lang.translate('remove').toLowerCase(),
+                        style: const TextStyle(fontWeight: FontWeight.w800))),
               ],
             ));
   }

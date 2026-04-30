@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:little_johor_explorer/data/services/auth_service.dart';
@@ -30,52 +29,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(lang.translate('select_avatar'),
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black)),
-              const SizedBox(height: 20),
-              Flexible(
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    mainAxisSpacing: 15,
-                    crossAxisSpacing: 15,
-                  ),
-                  itemCount: _zooAvatars.length,
-                  itemBuilder: (context, index) {
-                    final avatarPath = _zooAvatars[index];
-                    return GestureDetector(
-                      onTap: () async {
-                        await auth.updateAvatar(avatarPath);
-                        if (context.mounted) Navigator.pop(context);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: Colors.purple.withOpacity(0.3), width: 2),
-                        ),
-                        child: ClipOval(
-                            child: Image.asset(avatarPath, fit: BoxFit.cover)),
-                      ),
-                    );
-                  },
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(lang.translate('select_avatar'),
+                style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0A0A0A))),
+            const SizedBox(height: 20),
+            Flexible(
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
                 ),
+                itemCount: _zooAvatars.length,
+                itemBuilder: (context, index) {
+                  final path = _zooAvatars[index];
+                  final isCurrent = auth.currentUser?.avatarUrl == path;
+                  return GestureDetector(
+                    onTap: () async {
+                      await auth.updateAvatar(path);
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isCurrent
+                              ? const Color(0xFF0A0A0A)
+                              : const Color(0xFFF0F0F0),
+                          width: isCurrent ? 2.5 : 1,
+                        ),
+                      ),
+                      child:
+                          ClipOval(child: Image.asset(path, fit: BoxFit.cover)),
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
-        );
-      },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -87,6 +92,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final String? userRole = auth.currentUser?.role;
     final bool isParent = userRole == 'parent';
     final bool isAdmin = userRole == 'admin';
+    final String? cleanAvatarUrl =
+        auth.currentUser?.avatarUrl?.replaceFirst('file:///', '');
 
     String roleLabel;
     if (isAdmin) {
@@ -97,66 +104,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
       roleLabel = lang.currentLanguage == 'ms' ? "Kanak-kanak" : "Child";
     }
 
-    Color badgeColor;
-    if (isAdmin) {
-      badgeColor = Colors.purple.shade500;
-    } else if (isParent) {
-      badgeColor = Colors.lightBlue.shade400;
-    } else {
-      badgeColor = Colors.orange.shade400;
-    }
-
-    final String? cleanAvatarUrl =
-        auth.currentUser?.avatarUrl?.replaceFirst('file:///', '');
-
     return Scaffold(
-      body: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.purple.shade100.withOpacity(0.5),
-                  const Color(0xFFF8F9FE),
-                ],
+      backgroundColor: const Color(0xFFFAFAFA),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              // ── Top header ──────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Text(
+                  lang.translate('my_profile'),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0A0A0A),
+                    letterSpacing: -0.5,
+                  ),
+                ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: SingleChildScrollView(
+
+              // ── Avatar + name card ───────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                child: Container(
                   padding: const EdgeInsets.all(24),
-                  child: Column(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFF0F0F0)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: Row(
                     children: [
+                      // Avatar with edit button
                       Stack(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                    color: Colors.purple.withOpacity(0.1),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 5))
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              radius: 60,
-                              backgroundColor: Colors.grey.shade100,
-                              backgroundImage: cleanAvatarUrl != null
-                                  ? AssetImage(cleanAvatarUrl)
-                                  : null,
-                              child: cleanAvatarUrl == null
-                                  ? Icon(Icons.person,
-                                      size: 60, color: Colors.black)
-                                  : null,
-                            ),
+                          CircleAvatar(
+                            radius: 36,
+                            backgroundColor: const Color(0xFFF0F0F0),
+                            backgroundImage: cleanAvatarUrl != null
+                                ? AssetImage(cleanAvatarUrl)
+                                : null,
+                            child: cleanAvatarUrl == null
+                                ? const Icon(Icons.person,
+                                    size: 36, color: Colors.grey)
+                                : null,
                           ),
                           Positioned(
                             bottom: 0,
@@ -165,130 +164,216 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               onTap: () =>
                                   _showAvatarPicker(context, auth, lang),
                               child: Container(
-                                padding: const EdgeInsets.all(8),
+                                width: 24,
+                                height: 24,
                                 decoration: const BoxDecoration(
-                                    color: Colors.orange,
-                                    shape: BoxShape.circle),
-                                child: const Icon(Icons.camera_alt_rounded,
-                                    color: Colors.white, size: 20),
+                                  color: Color(0xFF0A0A0A),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.edit_rounded,
+                                    color: Colors.white, size: 12),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      Text(auth.currentUser?.displayName ?? "User",
-                          style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.black)),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 4),
-                        decoration: BoxDecoration(
-                            color: badgeColor, // ⭐️ Update this line!
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 5)
-                            ]),
-                        child: Text(roleLabel,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12)),
-                      ),
-                      const SizedBox(height: 50),
-                      _buildProfileCard(
-                        icon: Icons.edit_rounded,
-                        title: lang.translate('edit_profile'),
-                        color: Colors.purple.shade400,
-                        onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    const EditProfileScreen())),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildProfileCard(
-                        icon: Icons.logout_rounded,
-                        title: lang.translate('logout'),
-                        color: Colors.orange.shade700,
-                        onTap: () => _showLogoutDialog(context, auth, lang),
-                      ),
-                      const SizedBox(height: 16),
-                      if (isParent)
-                        _buildProfileCard(
-                          icon: Icons.person_remove_rounded,
-                          title: lang.currentLanguage == 'ms'
-                              ? "Padam Akaun"
-                              : "Terminate Account",
-                          color: Colors.redAccent,
-                          onTap: () =>
-                              _showDeleteAccountDialog(context, auth, lang),
+                      const SizedBox(width: 16),
+                      // Name + role + email
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              auth.currentUser?.displayName ?? "User",
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0A0A0A),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0A0A0A),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                roleLabel,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              auth.currentUser?.email ?? "",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade400,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
+                      ),
                     ],
                   ),
                 ),
               ),
-            ),
+
+              // ── Menu items ───────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFF0F0F0)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _menuItem(
+                        icon: Icons.person_outline_rounded,
+                        label: lang.translate('edit_profile'),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const EditProfileScreen())),
+                      ),
+                      _divider(),
+                      _menuItem(
+                        icon: Icons.logout_rounded,
+                        label: lang.translate('logout'),
+                        onTap: () => _showLogoutDialog(context, auth, lang),
+                        isDestructive: false,
+                      ),
+                      if (isParent) ...[
+                        _divider(),
+                        _menuItem(
+                          icon: Icons.person_remove_outlined,
+                          label: lang.currentLanguage == 'ms'
+                              ? "Padam Akaun"
+                              : "Terminate Account",
+                          onTap: () =>
+                              _showDeleteAccountDialog(context, auth, lang),
+                          isDestructive: true,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              // ── App info ─────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                child: Column(
+                  children: [
+                    Text(
+                      'Little Johor Explorer',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade400,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Version 1.0.0',
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey.shade300),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildProfileCard(
-      {required IconData icon,
-      required String title,
-      required Color color,
-      required VoidCallback onTap}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.purple.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4))
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-              color: color.withOpacity(0.1), shape: BoxShape.circle),
-          child: Icon(icon, color: color, size: 20),
+  Widget _menuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final color = isDestructive ? Colors.redAccent : const Color(0xFF0A0A0A);
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isDestructive
+                    ? Colors.red.shade50
+                    : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded,
+                size: 18, color: Colors.grey.shade300),
+          ],
         ),
-        title: Text(title,
-            style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: Colors.black)),
-        trailing: const Icon(Icons.chevron_right_rounded,
-            color: Colors.grey, size: 20),
-        onTap: onTap,
       ),
     );
   }
+
+  Widget _divider() => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(height: 0.5, color: const Color(0xFFF0F0F0)),
+      );
 
   void _showLogoutDialog(
       BuildContext context, AuthService auth, LanguageService lang) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
         title: Text(lang.translate('logout'),
-            style: TextStyle(fontWeight: FontWeight.w900, color: Colors.black)),
-        content: Text(lang.translate('logout_confirm_msg')),
+            style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                color: Color(0xFF0A0A0A))),
+        content: Text(lang.translate('logout_confirm_msg'),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(lang.translate('cancel'))),
+              child: Text(lang.translate('cancel'),
+                  style: TextStyle(color: Colors.grey.shade500))),
           TextButton(
             onPressed: () async {
               await auth.logout();
@@ -299,7 +384,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
             child: Text(lang.translate('logout'),
                 style: const TextStyle(
-                    color: Colors.orange, fontWeight: FontWeight.bold)),
+                    color: Color(0xFF0A0A0A), fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -311,20 +396,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
         title: Text(
             lang.currentLanguage == 'ms'
                 ? 'Padam Akaun?'
                 : 'Terminate Account?',
             style: const TextStyle(
-                fontWeight: FontWeight.w900, color: Colors.redAccent)),
-        content: Text(lang.currentLanguage == 'ms'
-            ? 'Adakah anda pasti mahu memadam akaun anda secara kekal?'
-            : 'Are you sure you want to permanently delete your account?'),
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                color: Colors.redAccent)),
+        content: Text(
+            lang.currentLanguage == 'ms'
+                ? 'Adakah anda pasti mahu memadam akaun anda secara kekal?'
+                : 'Are you sure you want to permanently delete your account? This cannot be undone.',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(lang.translate('cancel'))),
+              child: Text(lang.translate('cancel'),
+                  style: TextStyle(color: Colors.grey.shade500))),
           TextButton(
             onPressed: () async {
               await auth.deleteAccount();
@@ -335,7 +426,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
             child: Text(lang.translate('remove'),
                 style: const TextStyle(
-                    color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                    color: Colors.redAccent, fontWeight: FontWeight.w700)),
           ),
         ],
       ),

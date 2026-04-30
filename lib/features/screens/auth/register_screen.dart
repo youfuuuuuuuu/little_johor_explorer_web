@@ -86,221 +86,186 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FE),
-      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.white, // Clean white background
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
         elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 10, top: 10),
-          child: CircleAvatar(
-            backgroundColor: Colors.white.withOpacity(0.8),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.indigo),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded,
+              color: Colors.black), // Meta-style "Close"
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.deepPurple.shade50, const Color(0xFFF8F9FE)],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 60.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Pick Your Avatar!',
-                    style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.indigo),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start, // Left-aligned like Threads
+              children: [
+                const Text(
+                  'create account',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black,
+                    letterSpacing: -1.5,
                   ),
-                  const SizedBox(height: 15),
-                  Center(
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 380),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                        ),
-                        itemCount: _zooAvatars.length,
-                        itemBuilder: (context, index) {
-                          final avatarPath = _zooAvatars[index];
-                          bool isSelected = _selectedAvatar == avatarPath;
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Join the adventure in Johor.',
+                  style: TextStyle(fontSize: 15, color: Colors.grey.shade500),
+                ),
+                const SizedBox(height: 32),
 
-                          return GestureDetector(
-                            onTap: () =>
-                                setState(() => _selectedAvatar = avatarPath),
-                            child: AnimatedScale(
-                              scale: isSelected ? 1.1 : 1.0,
-                              duration: const Duration(milliseconds: 200),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? Colors.orange
-                                        : Colors.white,
-                                    width: 3,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: isSelected
-                                          ? Colors.orange.withOpacity(0.4)
-                                          : Colors.black.withOpacity(0.05),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    )
-                                  ],
-                                ),
-                                child: ClipOval(
-                                  child: Image.asset(avatarPath,
-                                      fit: BoxFit.cover),
-                                ),
-                              ),
+                // --- Modern Avatar Tray ---
+                const Text(
+                  'choose your avatar',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black54),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 80,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _zooAvatars.length,
+                    itemBuilder: (context, index) {
+                      final avatarPath = _zooAvatars[index];
+                      bool isSelected = _selectedAvatar == avatarPath;
+                      return GestureDetector(
+                        onTap: () =>
+                            setState(() => _selectedAvatar = avatarPath),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.black
+                                  : Colors.grey.shade200,
+                              width: isSelected ? 2.5 : 1,
                             ),
-                          );
-                        },
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(3.0),
+                            child: CircleAvatar(
+                              radius: 30,
+                              backgroundColor: Colors.grey.shade50,
+                              backgroundImage: AssetImage(avatarPath),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                // --- Form Fields ---
+                CustomTextField(
+                  controller: _displayNameController,
+                  labelText: 'full name',
+                  prefixIcon: const Icon(Icons.face_rounded,
+                      size: 20, color: Colors.black54),
+                  validator: (value) =>
+                      (value == null || value.isEmpty) ? 'Required' : null,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _emailController,
+                  labelText: 'email address',
+                  prefixIcon: const Icon(Icons.alternate_email_rounded,
+                      size: 20, color: Colors.black54),
+                  validator: (value) => (value == null || !value.contains('@'))
+                      ? 'Invalid email'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _passwordController,
+                  labelText: 'password',
+                  obscureText: _obscurePassword,
+                  prefixIcon: const Icon(Icons.lock_outline_rounded,
+                      size: 20, color: Colors.black54),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        size: 18),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _confirmPasswordController,
+                  labelText: 'confirm password',
+                  obscureText: _obscureConfirm,
+                  prefixIcon: const Icon(Icons.verified_user_outlined,
+                      size: 20, color: Colors.black54),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                        _obscureConfirm
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        size: 18),
+                    onPressed: () =>
+                        setState(() => _obscureConfirm = !_obscureConfirm),
+                  ),
+                ),
+
+                const SizedBox(height: 48),
+
+                _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                            color: Colors.black, strokeWidth: 2))
+                    : SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: _handleRegister,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: const Text('Get Started',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w700)),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 35),
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
-                        )
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        CustomTextField(
-                          controller: _displayNameController,
-                          labelText: 'Explorer Name',
-                          prefixIcon: const Icon(Icons.face_rounded,
-                              color: Colors.deepPurple),
-                          validator: (value) => (value == null || value.isEmpty)
-                              ? 'Name is required'
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        CustomTextField(
-                          controller: _emailController,
-                          labelText: 'Email Address',
-                          prefixIcon: const Icon(Icons.alternate_email_rounded,
-                              color: Colors.deepPurple),
-                          validator: (value) {
-                            if (value == null || value.isEmpty)
-                              return 'Email is required';
-                            if (!value.contains('@'))
-                              return 'Enter a valid email';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        CustomTextField(
-                          controller: _passwordController,
-                          labelText: 'Password',
-                          obscureText: _obscurePassword,
-                          prefixIcon: const Icon(Icons.lock_open_rounded,
-                              color: Colors.deepPurple),
-                          suffixIcon: IconButton(
-                            icon: Icon(_obscurePassword
-                                ? Icons.visibility_rounded
-                                : Icons.visibility_off_rounded),
-                            onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword),
-                          ),
-                          validator: (value) =>
-                              (value == null || value.length < 8)
-                                  ? 'Too short'
-                                  : null,
-                        ),
-                        const SizedBox(height: 16),
-                        CustomTextField(
-                          controller: _confirmPasswordController,
-                          labelText: 'Confirm Password',
-                          obscureText: _obscureConfirm,
-                          prefixIcon: const Icon(Icons.verified_user_rounded,
-                              color: Colors.deepPurple),
-                          suffixIcon: IconButton(
-                            icon: Icon(_obscureConfirm
-                                ? Icons.visibility_rounded
-                                : Icons.visibility_off_rounded),
-                            onPressed: () => setState(
-                                () => _obscureConfirm = !_obscureConfirm),
-                          ),
-                          validator: (value) {
-                            if (value != _passwordController.text)
-                              return 'Mismatch';
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 35),
-                  _isLoading
-                      ? const CircularProgressIndicator()
-                      : Container(
-                          constraints: const BoxConstraints(maxWidth: 500),
-                          width: double.infinity,
-                          height: 55,
-                          child: CustomButton(
-                            text: 'GET STARTED!',
-                            onPressed: _handleRegister,
-                          ),
-                        ),
-                  const SizedBox(height: 25),
-                  TextButton(
+
+                const SizedBox(height: 24),
+                Center(
+                  child: TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: RichText(
-                      text: TextSpan(
-                        style: const TextStyle(
-                            color: Colors.black54, fontSize: 14),
+                      text: const TextSpan(
+                        style: TextStyle(color: Colors.black54, fontSize: 14),
                         children: [
-                          const TextSpan(text: "Already an Explorer? "),
+                          TextSpan(text: "Already an Explorer? "),
                           TextSpan(
-                            text: "Log In",
-                            style: TextStyle(
-                              color: Colors.indigo.shade700,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
+                              text: "Log In",
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w800)),
                         ],
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 40),
+              ],
             ),
           ),
         ),

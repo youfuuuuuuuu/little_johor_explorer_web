@@ -36,7 +36,7 @@ class _MainWrapperState extends State<MainWrapper> {
           child: BottomNavigationBar(
             type: BottomNavigationBarType.fixed,
             currentIndex: _currentIndex,
-            selectedItemColor: Colors.deepPurple,
+            selectedItemColor: Colors.black,
             unselectedItemColor: Colors.grey,
             selectedFontSize: 12,
             unselectedFontSize: 12,
