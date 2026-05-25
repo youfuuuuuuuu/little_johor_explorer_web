@@ -6,6 +6,7 @@ import 'package:little_johor_explorer/data/services/local_storage_service.dart';
 import 'package:little_johor_explorer/core/widgets/custom_button.dart';
 import 'package:little_johor_explorer/core/widgets/custom_text_field.dart';
 import 'package:little_johor_explorer/features/screens/main_wrapper.dart';
+import 'package:little_johor_explorer/features/screens/auth/forget_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -28,43 +29,26 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _handleForgotPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid email first.')),
-      );
-      return;
-    }
-
-    try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      await authService.sendPasswordReset(email);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Account verified! Reset simulation complete.'),
-              backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
-        );
-      }
-    }
+  void _handleForgotPassword() {
+    final currentEmail = _emailController.text.trim();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ForgotPasswordScreen(
+          initialEmail: currentEmail.isNotEmpty ? currentEmail : null,
+        ),
+      ),
+    );
   }
 
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
+
       try {
         final authService = Provider.of<AuthService>(context, listen: false);
         final storage =
             Provider.of<LocalStorageService>(context, listen: false);
-
         final success = await authService.login(
           email: _emailController.text.trim(),
           password: _passwordController.text,
@@ -82,11 +66,17 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             (route) => false,
           );
-        } else if (mounted) {
+        }
+      } catch (e) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Login failed. Check your details.'),
-                backgroundColor: Colors.red),
+            SnackBar(
+              content: Text(e.toString().replaceAll('Exception: ', '')),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
           );
         }
       } finally {

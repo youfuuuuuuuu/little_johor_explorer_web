@@ -413,24 +413,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Horizontal scrollable grid ────────────────────────────────────────────
-  //
-  // Layout rules (both mobile and web/tab):
-  //   • Top row fills first, bottom row fills with the remainder.
-  //   • topCount  = ceil(total / 2)   e.g. 5 stories → top=3, bottom=2
-  //   • bottomCount = floor(total / 2)
-  //
-  // Mobile  (width ≤ 600): visibleCols = 2
-  //   • 5 stories  → top=[1,2,3]  bottom=[4,5]   → 3 columns, peek of col 3
-  //   • 6 stories  → top=[1,2,3]  bottom=[4,5,6] → 3 columns, all visible
-  //   • 8 stories  → top=[1,2,3,4] bottom=[5,6,7,8] → 4 columns, peek of col 3+4
-  //
-  // Web/Tab (width > 600): visibleCols = 4
-  //   • 9 stories  → top=[1..5] bottom=[6..9] → 5 columns, peek of col 5
-  //   • 10 stories → top=[1..5] bottom=[6..10] → 5 columns, peek of col 5
-  //
-  // Each column = 1 top card stacked above 1 bottom card (or empty if no pair).
-  // Columns scroll horizontally.
   Widget _horizontalStoryGrid(
       BuildContext context, List<Story> stories, bool isQuiz) {
     return LayoutBuilder(
@@ -441,22 +423,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
         const double sidePad = 20.0;
         const double gap = 12.0;
-        // Small peek to hint there are more cards off-screen
         const double peekWidth = 24.0;
 
-        // Card width sized so exactly `visibleCols` fit, plus a peek
         final double availableW = screenW - sidePad - peekWidth;
         final double cardW = (availableW - gap * visibleCols) / visibleCols;
         final double cardH = cardW / 0.72;
-
-        // Split into top row and bottom row.
-        //
-        // Rule: top row fills at least `visibleCols` items before bottom row
-        // starts receiving any. After that, top and bottom grow together.
-        //
-        // Verified examples:
-        //   mobile (2): 5→top=3,bot=2  6→3,3  8→4,4
-        //   web    (4): 5→top=4,bot=1  6→4,2  8→4,4  9→5,4  10→5,5
         final int total = stories.length;
         final int ceilHalf = (total / 2).ceil();
         final int topCount = total <= visibleCols

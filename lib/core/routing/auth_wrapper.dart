@@ -11,26 +11,40 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
-    final firebaseUser = fb_auth.FirebaseAuth.instance.currentUser;
-    if (firebaseUser != null && authService.currentUser == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: Colors.blue),
-        ),
-      );
-    }
+    return StreamBuilder<fb_auth.User?>(
+      stream: fb_auth.FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator(color: Colors.blue)),
+          );
+        }
 
-    if (!authService.isAuthenticated || authService.currentUser == null) {
-      return const LoginScreen();
-    }
+        final firebaseUser = snapshot.data;
 
-    final String role = authService.currentUser!.role;
+        if (firebaseUser == null) {
+          return const LoginScreen();
+        }
 
-    if (role == 'admin') {
-      return const AdminDashboardScreen();
-    } else {
-      return const MainWrapper();
-    }
+        return Consumer<AuthService>(
+          builder: (context, authService, child) {
+            if (authService.currentUser == null) {
+              return const Scaffold(
+                body: Center(
+                    child: CircularProgressIndicator(color: Colors.blue)),
+              );
+            }
+
+            final String role = authService.currentUser!.role;
+
+            if (role == 'admin') {
+              return const AdminDashboardScreen();
+            } else {
+              return const MainWrapper();
+            }
+          },
+        );
+      },
+    );
   }
 }

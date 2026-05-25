@@ -113,22 +113,48 @@ class AuthService extends ChangeNotifier {
     return "";
   }
 
-  Future<bool> login(
-      {required String email,
-      required String password,
-      LocalStorageService? storage}) async {
+  Future<bool> login({
+    required String email,
+    required String password,
+    LocalStorageService? storage,
+  }) async {
     try {
       final credential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
+
       if (credential.user != null) {
         await _fetchAndSetUser(credential.user!.uid);
         if (storage != null) storage.setCurrentUser(_currentUser!.id);
         return true;
       }
       return false;
+    } on fb_auth.FirebaseAuthException catch (e) {
+      String errorMessage = "Login failed. Please try again.";
+
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage =
+              "No account found for this email. Please register first.";
+          break;
+        case 'wrong-password':
+          errorMessage =
+              "Incorrect password. If you recently changed it, please use the new one.";
+          break;
+        case 'invalid-credential':
+          errorMessage =
+              "Invalid email or password. Please check your details.";
+          break;
+        case 'invalid-email':
+          errorMessage = "The email address is badly formatted.";
+          break;
+      }
+
+      debugPrint("Firebase Login Error: ${e.code} - $errorMessage");
+
+      throw Exception(errorMessage);
     } catch (e) {
-      debugPrint("Login failed: $e");
-      return false;
+      debugPrint("General Login failed: $e");
+      throw Exception("An unexpected error occurred. Please try again.");
     }
   }
 
@@ -282,48 +308,14 @@ class AuthService extends ChangeNotifier {
   Future<bool> editChild({
     required String childId,
     required String newName,
-    String? newPassword,
     String? newAvatarUrl,
   }) async {
     if (_currentUser == null) return false;
     try {
       Map<String, dynamic> updates = {'displayName': newName};
       if (newAvatarUrl != null) updates['avatarUrl'] = newAvatarUrl;
+
       await _firestore.collection('users').doc(childId).update(updates);
-
-      if (newPassword != null && newPassword.isNotEmpty) {
-        try {
-          String? idToken = await _auth.currentUser?.getIdToken();
-
-          if (idToken != null) {
-            final String url =
-                'https://us-central1-little-johor-explorer-db.cloudfunctions.net/updateChildPassword';
-            final response = await http.post(
-              Uri.parse(url),
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer $idToken',
-              },
-              body: jsonEncode({
-                "data": {
-                  "childUid": childId,
-                  "newPassword": newPassword,
-                }
-              }),
-            );
-
-            if (response.statusCode != 200) {
-              debugPrint("HTTP Function Error: ${response.body}");
-              return false;
-            }
-            debugPrint("Password successfully updated via HTTP!");
-          }
-        } catch (e) {
-          debugPrint("Failed to update password via HTTP: $e");
-          return false;
-        }
-      }
-
       await _fetchAndSetUser(_currentUser!.id);
       return true;
     } catch (e) {
@@ -380,16 +372,6 @@ class AuthService extends ChangeNotifier {
         .update({'displayName': newName});
     await _fetchAndSetUser(_currentUser!.id);
     return true;
-  }
-
-  Future<bool> updatePassword({required String newPassword}) async {
-    try {
-      await _auth.currentUser?.updatePassword(newPassword);
-      return true;
-    } catch (e) {
-      debugPrint("Password update failed: $e");
-      return false;
-    }
   }
 
   Future<void> logout() async {

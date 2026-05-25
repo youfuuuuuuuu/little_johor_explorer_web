@@ -503,12 +503,10 @@ class _ParentDashboardState extends State<ParentDashboard> {
       ChildProfile child, LanguageService lang) {
     final nameC = TextEditingController(text: child.name);
     final emailC = TextEditingController(text: auth.getChildEmail(child.id));
-    final passC = TextEditingController();
-    final confC = TextEditingController();
     String avatar = child.avatarUrl ?? _zooAvatars[0];
     bool isSaving = false;
-    bool obsP = true;
-    bool obsC = true;
+
+    // 💡 提示：我们已经删除了 passC, confC 以及 obsP, obsC 变量，代码更干净了！
 
     showDialog(
       context: context,
@@ -525,6 +523,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
             width: 450,
             child: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
+                // ── 头像选择 ──
                 GestureDetector(
                   onTap: () => _openAvatarPicker(
                       context, lang, (p) => setS(() => avatar = p)),
@@ -546,6 +545,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   ),
                 ),
                 const SizedBox(height: 25),
+
+                // ── 基本信息 ──
                 _buildCardWrapper(
                     title: lang.translate('user_info'),
                     children: [
@@ -560,15 +561,65 @@ class _ParentDashboardState extends State<ParentDashboard> {
                           icon: Icons.email_outlined),
                     ]),
                 const SizedBox(height: 20),
+
+                // ── 安全与密码重置 (使用新逻辑) ──
                 _buildCardWrapper(title: lang.translate('security'), children: [
-                  Text(lang.translate('leave_pass_empty'),
-                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        try {
+                          // 直接调用 AuthService 发送重置邮件给该孩子账号
+                          await auth.sendPasswordReset(emailC.text);
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(lang.currentLanguage == 'ms'
+                                    ? 'E-mel tetapan semula dihantar ke ${emailC.text}'
+                                    : 'Reset email sent to ${emailC.text}'),
+                                backgroundColor: const Color(0xFF22C55E),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Error: ${e.toString().replaceAll('Exception: ', '')}'),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.mark_email_read_rounded,
+                          color: Colors.white, size: 18),
+                      label: Text(
+                        lang.currentLanguage == 'ms'
+                            ? 'Hantar E-mel Reset Kata Laluan'
+                            : 'Send Password Reset Email',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 10),
-                  _buildPasswordField(lang.translate('new_password'), passC,
-                      obsP, () => setS(() => obsP = !obsP)),
-                  const SizedBox(height: 15),
-                  _buildPasswordField(lang.translate('confirm_new_password'),
-                      confC, obsC, () => setS(() => obsC = !obsC)),
+                  Text(
+                    lang.currentLanguage == 'ms'
+                        ? "Satu pautan akan dihantar ke e-mel ini untuk menukar kata laluan dengan selamat."
+                        : "A secure link will be sent to this email to change the password.",
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
                 ]),
               ]),
             ),
@@ -582,42 +633,24 @@ class _ParentDashboardState extends State<ParentDashboard> {
               onPressed: isSaving
                   ? null
                   : () async {
+                      // 验证名字不能为空
                       if (nameC.text.trim().isEmpty) {
                         _showError(context, "Name cannot be empty.");
                         return;
                       }
 
-                      if (passC.text.isNotEmpty || confC.text.isNotEmpty) {
-                        if (passC.text.length < 8) {
-                          _showError(context,
-                              "New password must be at least 8 characters.");
-                          return;
-                        }
-                        // Check if passwords match
-                        if (passC.text != confC.text) {
-                          _showError(
-                              context,
-                              lang.currentLanguage == 'ms'
-                                  ? "Kata laluan tidak sepadan!"
-                                  : "Passwords do not match!");
-                          return;
-                        }
-                      }
-
                       setS(() => isSaving = true);
 
                       try {
-                        // Call the AuthService to update info
+                        // 💡 注意这里：调用 editChild 时不再需要传递 newPassword
                         await auth.editChild(
                             childId: child.id,
                             newName: nameC.text.trim(),
-                            newPassword:
-                                passC.text.isNotEmpty ? passC.text : null,
                             newAvatarUrl: avatar);
 
-                        if (mounted) Navigator.pop(context);
+                        if (context.mounted) Navigator.pop(context);
                       } catch (e) {
-                        if (mounted) {
+                        if (context.mounted) {
                           setS(() => isSaving = false);
                           _showError(context, "Failed to update child info.");
                         }
