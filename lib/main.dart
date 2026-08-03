@@ -11,9 +11,12 @@ import 'package:little_johor_explorer/data/services/gemini_service.dart';
 import 'package:little_johor_explorer/data/services/language_service.dart';
 import 'package:little_johor_explorer/data/services/chat_service.dart';
 import 'package:little_johor_explorer/data/services/progress_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load(fileName: ".env");
 
   try {
     await Firebase.initializeApp(
