@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 class MessageBubble extends StatelessWidget {
   final String message;
@@ -13,56 +12,103 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        padding: const EdgeInsets.all(12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        decoration: BoxDecoration(
-          color: isUser ? Colors.purple.shade400 : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isUser ? 16 : 0),
-            bottomRight: Radius.circular(isUser ? 0 : 16),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: MarkdownBody(
-          data: message,
-          selectable: true,
-          styleSheet: MarkdownStyleSheet(
-            p: TextStyle(
-              color: isUser ? Colors.white : Colors.black87,
-              fontSize: 15,
-              height: 1.5,
-            ),
-            strong: TextStyle(
-              color: isUser ? Colors.white : Colors.black,
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
-            em: TextStyle(
-              color: isUser ? Colors.white70 : Colors.black54,
-              fontSize: 15,
-              fontStyle: FontStyle.italic,
-            ),
-            listBullet: TextStyle(
-              color: isUser ? Colors.white : Colors.purple.shade700,
-              fontSize: 15,
-            ),
-          ),
-        ),
+    return Text.rich(
+      TextSpan(
+        children: _parseMarkdownToSpans(message),
+      ),
+      style: TextStyle(
+        fontSize: 14,
+        height: 1.5,
+        color: isUser ? Colors.white : const Color(0xFF2D2D2D),
       ),
     );
+  }
+
+  List<InlineSpan> _parseMarkdownToSpans(String rawText) {
+    List<InlineSpan> spans = [];
+    List<String> lines = rawText.split('\n');
+
+    for (int i = 0; i < lines.length; i++) {
+      String line = lines[i];
+      bool isHeader = false;
+      bool isBullet = false;
+
+      if (line.trim().startsWith('###')) {
+        isHeader = true;
+        line = line.replaceFirst('###', '').trim();
+      } else if (line.trim().startsWith('-')) {
+        isBullet = true;
+        line = line.replaceFirst('-', '').trim();
+      }
+
+      List<TextSpan> inlineSpans = [];
+      final RegExp exp = RegExp(r'\*\*(.*?)\*\*|\*(.*?)\*');
+
+      line.splitMapJoin(
+        exp,
+        onMatch: (Match match) {
+          if (match.group(1) != null) {
+            inlineSpans.add(TextSpan(
+              text: match.group(1),
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: isUser ? Colors.white : const Color(0xFF0A0A0A),
+              ),
+            ));
+          } else if (match.group(2) != null) {
+            inlineSpans.add(TextSpan(
+              text: match.group(2),
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.bold,
+                color: isUser ? Colors.white70 : const Color(0xFF1D4ED8),
+              ),
+            ));
+          }
+          return '';
+        },
+        onNonMatch: (String nonMatch) {
+          inlineSpans.add(TextSpan(text: nonMatch));
+          return '';
+        },
+      );
+
+      if (isHeader) {
+        spans.add(TextSpan(
+          children: inlineSpans,
+          style: TextStyle(
+            fontSize: 16.5,
+            fontWeight: FontWeight.w900,
+            color: isUser ? Colors.white : const Color(0xFF0A0A0A),
+            height: 2.0,
+          ),
+        ));
+      } else if (isBullet) {
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 4, right: 8),
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: isUser ? Colors.white70 : Colors.purple.shade700,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        );
+        spans.add(TextSpan(children: inlineSpans));
+      } else {
+        spans.add(TextSpan(children: inlineSpans));
+      }
+      if (i < lines.length - 1) {
+        spans.add(const TextSpan(text: '\n'));
+      }
+    }
+
+    return spans;
   }
 }

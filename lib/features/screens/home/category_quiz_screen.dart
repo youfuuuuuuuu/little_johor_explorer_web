@@ -115,7 +115,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
     }
   }
 
-  // ── Image helper ──────────────────────────────────────────────────────────
   Widget _buildImage(String path) {
     if (path.isEmpty) return _imagePlaceholder();
     if (path.startsWith('http')) {
@@ -163,7 +162,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
       backgroundColor: const Color(0xFFFAFAFA),
       body: Stack(
         children: [
-          // ── Main content ──────────────────────────────────────────────
           _showReview
               ? _buildReviewScreen(questions, lang)
               : _quizCompleted
@@ -173,8 +171,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                       auth.currentUser?.displayName ?? 'Explorer',
                     )
                   : _buildQuizScreen(story, questions, lang),
-
-          // ── Confetti ──────────────────────────────────────────────────
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
@@ -192,16 +188,15 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
     );
   }
 
-  // ── Quiz screen ───────────────────────────────────────────────────────────
   Widget _buildQuizScreen(
       Story story, List<StoryQuizQuestion> questions, LanguageService lang) {
     final currentQ = questions[_currentQuestionIndex];
     final double progress = (_currentQuestionIndex + 1) / questions.length;
+    final String? displayImage = currentQ.qImage;
 
     return SafeArea(
       child: Column(
         children: [
-          // ── App bar ─────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
             child: Row(
@@ -237,7 +232,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                     ],
                   ),
                 ),
-                // Score pill
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
@@ -257,8 +251,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
               ],
             ),
           ),
-
-          // ── Progress bar ────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
             child: Column(
@@ -276,8 +268,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
               ],
             ),
           ),
-
-          // ── Question + options ──────────────────────────────────────
           Expanded(
             child: FadeTransition(
               opacity: _fadeAnimation,
@@ -289,21 +279,19 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Question image
-                      if (currentQ.qImage != null &&
-                          currentQ.qImage!.isNotEmpty) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: 200,
-                            child: _buildImage(currentQ.qImage!),
+                      if (displayImage != null && displayImage.isNotEmpty) ...[
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: SizedBox(
+                              width: 340,
+                              height: 340,
+                              child: _buildImage(displayImage),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                       ],
-
-                      // Question text
                       Text(
                         currentQ.questionMs,
                         style: const TextStyle(
@@ -315,8 +303,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                         ),
                       ),
                       const SizedBox(height: 24),
-
-                      // Answer options
                       ...List.generate(
                         currentQ.answersMs.length,
                         (index) => _answerOption(
@@ -332,8 +318,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                           ),
                         ),
                       ),
-
-                      // Hint
                       _buildHintSection(currentQ.hintMs, lang),
                       const SizedBox(height: 20),
                     ],
@@ -347,7 +331,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
     );
   }
 
-  // ── Answer option ─────────────────────────────────────────────────────────
   Widget _answerOption({
     required int index,
     required String text,
@@ -357,7 +340,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
     final bool isCorrect = index == correctIndex;
     final bool isSelected = _selectedAnswerIndex == index;
 
-    // Determine visual state
     Color bgColor;
     Color borderColor;
     Color textColor;
@@ -410,7 +392,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
         ),
         child: Row(
           children: [
-            // Letter badge
             AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               width: 30,
@@ -425,7 +406,7 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
               ),
               child: Center(
                 child: Text(
-                  String.fromCharCode(65 + index), // A, B, C, D
+                  String.fromCharCode(65 + index),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -437,7 +418,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
               ),
             ),
             const SizedBox(width: 12),
-            // Answer text
             Expanded(
               child: Text(
                 text,
@@ -459,7 +439,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
     );
   }
 
-  // ── Hint section ──────────────────────────────────────────────────────────
   Widget _buildHintSection(String? hint, LanguageService lang) {
     if (hint == null || hint.isEmpty) return const SizedBox();
     return Column(
@@ -549,7 +528,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
     );
   }
 
-  // ── Result screen ─────────────────────────────────────────────────────────
   Widget _buildResultScreen(LanguageService lang, int total, String userName) {
     final int pointsEarned = _score * 10;
     final double percent = _score / total;
@@ -561,7 +539,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            // Top close
             Align(
               alignment: Alignment.centerLeft,
               child: IconButton(
@@ -572,8 +549,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
               ),
             ),
             const Spacer(),
-
-            // Score card
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(32),
@@ -591,7 +566,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
               ),
               child: Column(
                 children: [
-                  // Emoji
                   Text(
                     isPerfect
                         ? '🏆'
@@ -612,7 +586,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Score display
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -641,7 +614,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Progress bar
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
@@ -658,7 +630,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Points badge
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -678,10 +649,7 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                 ],
               ),
             ),
-
             const Spacer(),
-
-            // Action buttons
             Column(
               children: [
                 SizedBox(
@@ -730,13 +698,11 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
     );
   }
 
-  // ── Review screen ─────────────────────────────────────────────────────────
   Widget _buildReviewScreen(
       List<StoryQuizQuestion> questions, LanguageService lang) {
     return SafeArea(
       child: Column(
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
             child: Row(
@@ -756,7 +722,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                   ),
                 ),
                 const Spacer(),
-                // Summary pill
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
@@ -776,7 +741,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
               ],
             ),
           ),
-          // List
           Expanded(
             child: ListView.builder(
               physics: const BouncingScrollPhysics(),
@@ -809,7 +773,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Q number + status
                       Row(
                         children: [
                           Container(
@@ -842,7 +805,6 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                         ],
                       ),
                       const SizedBox(height: 12),
-                      // Question
                       Text(
                         q.questionMs,
                         style: const TextStyle(
@@ -853,13 +815,11 @@ class _CategoryQuizScreenState extends State<CategoryQuizScreen>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      // Correct answer
                       _reviewAnswerRow(
                         label: lang.translate('correct_answer'),
                         text: q.answersMs[q.correct],
                         isCorrect: true,
                       ),
-                      // User's wrong answer
                       if (!isCorrect && userAnswerIdx >= 0) ...[
                         const SizedBox(height: 6),
                         _reviewAnswerRow(

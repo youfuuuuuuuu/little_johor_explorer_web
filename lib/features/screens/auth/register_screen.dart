@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:little_johor_explorer/data/services/story_service.dart';
 import 'package:little_johor_explorer/core/constants/routes.dart';
 import 'package:little_johor_explorer/data/services/auth_service.dart';
 import 'package:little_johor_explorer/data/services/local_storage_service.dart';
 import 'package:little_johor_explorer/core/widgets/custom_button.dart';
 import 'package:little_johor_explorer/core/widgets/custom_text_field.dart';
+import 'package:little_johor_explorer/features/screens/main_wrapper.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -25,17 +27,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirm = true;
 
   final List<String> _zooAvatars = [
-    'assets/images/avatars/malayan_tiger.png',
-    'assets/images/avatars/malayan_tapir.png',
-    'assets/images/avatars/capybara.png',
-    'assets/images/avatars/sun_bear.png',
-    'assets/images/avatars/mandrill.png',
-    'assets/images/avatars/saltwater_crocodile.png',
-    'assets/images/avatars/wallaby.png',
-    'assets/images/avatars/greater_flamingo.png',
+    'assets/images/avatars/malayan_tiger.webp',
+    'assets/images/avatars/saltwater_crocodile.webp',
+    'assets/images/avatars/wallaby.webp',
+    'assets/images/avatars/greater_flamingo.webp',
+    'assets/images/avatars/malayan_tapir.webp',
+    'assets/images/avatars/capybara.webp',
+    'assets/images/avatars/sun_bear.webp',
+    'assets/images/avatars/mandrill.webp',
   ];
 
-  String _selectedAvatar = 'assets/images/avatars/malayan_tiger.png';
+  String _selectedAvatar = 'assets/images/avatars/malayan_tiger.webp';
 
   @override
   void dispose() {
@@ -49,12 +51,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _handleRegister() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
+
       try {
         final authService = Provider.of<AuthService>(context, listen: false);
-        final storageService =
+        final storage =
             Provider.of<LocalStorageService>(context, listen: false);
-
-        final success = await authService.register(
+        final storyService = Provider.of<StoryService>(context, listen: false);
+        final String? errorMessage = await authService.register(
           email: _emailController.text.trim(),
           password: _passwordController.text,
           displayName: _displayNameController.text.trim(),
@@ -62,19 +65,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
           avatarUrl: _selectedAvatar,
         );
 
-        if (success && mounted) {
-          storageService.clearUserSession();
+        if (errorMessage == null && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('Registration successful! Please log in.'),
-                backgroundColor: Colors.green),
+              content: Text(
+                  'Registration successful! Welcome to Little Johor Explorer!'),
+              backgroundColor: Colors.green,
+            ),
           );
-          Navigator.pop(context);
-        } else if (mounted) {
+          await storyService.fetchStoriesFromFirebase();
+          if (!mounted) return;
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation1, animation2) =>
+                  const MainWrapper(),
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+            ),
+            (route) => false,
+          );
+        } else if (errorMessage != null && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Registration failed: Email already registered!'),
-                backgroundColor: Colors.red),
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Registration failed: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       } finally {
@@ -86,13 +112,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Clean white background
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded,
-              color: Colors.black), // Meta-style "Close"
+          icon: const Icon(Icons.close_rounded, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -102,8 +127,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start, // Left-aligned like Threads
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'create account',
@@ -120,8 +144,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: TextStyle(fontSize: 15, color: Colors.grey.shade500),
                 ),
                 const SizedBox(height: 32),
-
-                // --- Modern Avatar Tray ---
                 const Text(
                   'choose your avatar',
                   style: TextStyle(
@@ -166,11 +188,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // --- Form Fields ---
                 CustomTextField(
                   controller: _displayNameController,
-                  labelText: 'full name',
+                  labelText: 'username',
                   prefixIcon: const Icon(Icons.face_rounded,
                       size: 20, color: Colors.black54),
                   validator: (value) =>
@@ -220,9 +240,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         setState(() => _obscureConfirm = !_obscureConfirm),
                   ),
                 ),
-
                 const SizedBox(height: 48),
-
                 _isLoading
                     ? const Center(
                         child: CircularProgressIndicator(
@@ -244,7 +262,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   fontSize: 16, fontWeight: FontWeight.w700)),
                         ),
                       ),
-
                 const SizedBox(height: 24),
                 Center(
                   child: TextButton(

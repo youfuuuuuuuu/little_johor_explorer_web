@@ -9,33 +9,43 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State & UI Utilities
   provider: ^6.1.2
   intl: ^0.20.2
   confetti: ^0.8.0
   permission_handler: ^12.0.1
-  image_picker: ^1.2.1
   cupertino_icons: ^1.0.6
   flutter_svg: ^2.0.9
   cached_network_image: ^3.3.1
   flutter_markdown_plus: ^1.0.7
+
+  # Authentication & Core
   firebase_core: ^4.5.0
   firebase_auth: ^6.1.4
   cloud_firestore: ^6.1.3
-  firebase_storage: ^13.2.0
-  firebase_ai: ^3.11.0
+
+  # Local Storage Features
   shared_preferences: ^2.2.3
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+
+  # Google AI Developer Studio Client
+  google_generative_ai: ^0.4.7
+
+  # Audio, Media & Tools
   http: ^1.6.0
   flutter_tts: ^4.2.5
   speech_to_text: ^7.3.0
   audioplayers: ^6.6.0
-  record: ^6.2.0
+  record: ^7.1.1
   path_provider: ^2.1.2
-  flutter_localizations:
-    sdk: flutter
-  cloud_functions: ^6.2.0
   dice_bear: ^1.0.0
+  flutter_dotenv: ^6.0.1
+  flutter_local_notifications: ^22.0.1
+  app_badge_plus: ^1.3.1
 
 dev_dependencies:
   flutter_test:
@@ -45,7 +55,7 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.1
   flutter_native_splash: ^2.4.0
 
-# ─── Root-level config (NOT inside flutter:) ──────────────────────────────
+# ─── Root-level config──────────────────────────────
 
 flutter_launcher_icons:
   android: true
@@ -62,10 +72,15 @@ flutter_native_splash:
   ios: true
   fullscreen: false
 
-# ─── Flutter section ───────────────────────────────────────────────────────
-
+# ─── Flutter section ────────────────────────────────
 flutter:
   uses-material-design: true
+
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-VariableFont_wdth,wght.ttf
+
   assets:
     - assets/images/
     - assets/images/avatars/
@@ -73,3 +88,7 @@ flutter:
     - assets/images/marteen_ke_johor_bahru/
     - assets/images/marteen_ke_muar/
     - assets/images/marteen_ke_kota_tinggi/
+    - assets/images/masjid/
+    - assets/images/chingay/
+    - assets/images/sultan_abu_bakar/
+    - assets/images/kota_jail/

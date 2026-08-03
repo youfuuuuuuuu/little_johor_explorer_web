@@ -92,7 +92,7 @@ class Story {
           return StoryQuizQuestion.fromMap(safeMap);
         }).toList();
       } catch (e) {
-        print("Error parsing quiz questions for story $documentId: $e");
+        debugPrint("Error parsing quiz questions for story $documentId: $e");
         parsedQuizzes = [];
       }
     }
@@ -113,6 +113,7 @@ class Story {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'title': title,
       'description': description,
       'coverImageUrl': coverImageUrl,

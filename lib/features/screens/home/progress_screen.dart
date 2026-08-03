@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:little_johor_explorer/data/services/local_storage_service.dart';
@@ -24,35 +25,53 @@ class ProgressScreen extends StatelessWidget {
     }
 
     final history = storage.getHistory();
-    final earnedBadges = storage.getEarnedBadgeIds();
     final points = storage.getPoints();
     final readingTime = storage.getTotalReadingTime();
 
-    final readingActivities = history
-        .where((item) => item.contains("Read:"))
-        .toList()
-        .reversed
-        .take(10)
-        .map((item) {
-      final title = item.replaceFirst("Read:", "").trim();
-      return {
-        'story': _findStoryByTitle(storyService.stories, title),
-        'points': 10,
-      };
-    }).toList();
+    final readStoryIds = storage.getReadStoryIds();
+    final int totalStoriesRead = readStoryIds.length;
 
-    final quizActivities = history
-        .where((item) => item.contains("Quiz:"))
-        .toList()
-        .reversed
-        .take(10)
-        .map((item) {
-      final title = item.replaceFirst("Quiz:", "").trim();
-      return {
-        'story': _findStoryByTitle(storyService.stories, title),
-        'points': 10,
-      };
-    }).toList();
+    final List<Map<String, dynamic>> badgeMilestones = [
+      {'id': 'newbie', 'label': 'Newbie', 'icon': '📖', 'threshold': 1},
+      {'id': 'curious', 'label': 'Curious', 'icon': '🔍', 'threshold': 3},
+      {
+        'id': 'storyteller',
+        'label': 'Storyteller',
+        'icon': '🗣️',
+        'threshold': 5
+      },
+      {
+        'id': 'adventurer',
+        'label': 'Adventurer',
+        'icon': '🎒',
+        'threshold': 10
+      },
+      {'id': 'expert', 'label': 'Johor Expert', 'icon': '🌟', 'threshold': 15},
+      {'id': 'legend', 'label': 'Legend', 'icon': '👑', 'threshold': 20},
+    ];
+
+    final int earnedBadgesCount = badgeMilestones
+        .where((badge) => totalStoriesRead >= (badge['threshold'] as int))
+        .length;
+
+    final List<String> recentEventsFirst = history
+        .map((item) => item.toString())
+        .where((item) => item.startsWith("Read:"))
+        .map((item) => item.replaceFirst("Read:", "").trim())
+        .toList();
+
+    List<String> top10UniqueTitles = [];
+    for (String title in recentEventsFirst) {
+      if (!top10UniqueTitles.contains(title)) {
+        top10UniqueTitles.add(title);
+      }
+      if (top10UniqueTitles.length == 10) break;
+    }
+
+    final List<Story> readingActivities = top10UniqueTitles
+        .map((title) => _findStoryByTitle(storyService.stories, title))
+        .where((story) => story.id != 'temp')
+        .toList();
 
     final int level = (points / 100).floor() + 1;
     final double progress = (points % 100) / 100;
@@ -67,7 +86,6 @@ class ProgressScreen extends StatelessWidget {
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // Header
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -82,8 +100,6 @@ class ProgressScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // Level card
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -166,8 +182,6 @@ class ProgressScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // Stat Cards Row
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -191,43 +205,26 @@ class ProgressScreen extends StatelessWidget {
                       Expanded(
                           child: _statCard(
                         icon: Icons.emoji_events_rounded,
-                        value: '${earnedBadges.length}',
+                        value: '$earnedBadgesCount',
                         label: lang.translate('my_badges'),
                       )),
                     ],
                   ),
                 ),
               ),
-
-              // ── Badges Section (Show 8 on Web, 4 on Mobile) ────────────────
               _sectionHeader(lang.translate('my_badges')),
               SliverToBoxAdapter(
-                child:
-                    _buildBadgeGrid(earnedBadges, isLargeScreen, screenWidth),
+                child: _buildBadgeGrid(context, badgeMilestones,
+                    totalStoriesRead, isLargeScreen, screenWidth),
               ),
-
-              // ── Stories read (Dynamic 2/4) ────────────────────────────────
               _sectionHeader(lang.currentLanguage == 'ms'
                   ? "Cerita Telah Dibaca"
                   : "Stories Read"),
               SliverToBoxAdapter(
                 child: readingActivities.isEmpty
                     ? _emptySection(lang.translate('no_stories_read'))
-                    : _horizontalActivityList(context, readingActivities, false,
-                        isLargeScreen, screenWidth),
+                    : _verticalActivityList(context, readingActivities),
               ),
-
-              // ── Quizzes done (Dynamic 2/4) ────────────────────────────────
-              _sectionHeader(lang.currentLanguage == 'ms'
-                  ? "Kuiz Telah Diambil"
-                  : "Quizzes Taken"),
-              SliverToBoxAdapter(
-                child: quizActivities.isEmpty
-                    ? _emptySection(lang.translate('no_quizzes_taken'))
-                    : _horizontalActivityList(context, quizActivities, true,
-                        isLargeScreen, screenWidth),
-              ),
-
               const SliverToBoxAdapter(child: SizedBox(height: 50)),
             ],
           ),
@@ -313,161 +310,144 @@ class ProgressScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBadgeGrid(List<String> earnedIds, bool isLarge, double width) {
-    // Show 8 on Web/Tab, 4 on Mobile
+  Widget _buildBadgeGrid(
+      BuildContext context,
+      List<Map<String, dynamic>> badges,
+      int totalStoriesRead,
+      bool isLarge,
+      double width) {
     final int visibleCount = isLarge ? 8 : 4;
-    final double padding = 40.0; // Left + Right padding
+    final double padding = 40.0;
     final double spacing = 10.0 * (visibleCount - 1);
     final double itemWidth = (width - padding - spacing) / visibleCount;
 
-    final List<Map<String, String>> badges = [
-      {'id': 'first_discovery', 'label': 'First Read', 'icon': '📖'},
-      {'id': 'JOHOR-BAHRU Master', 'label': 'J.Bahru', 'icon': '🏙️'},
-      {'id': 'MUAR Master', 'label': 'Muar', 'icon': '🌊'},
-      {'id': 'KOTA-TINGGI Master', 'label': 'K.Tinggi', 'icon': '⛰️'},
-      {'id': 'KULAI Master', 'label': 'Kulai', 'icon': '🌿'},
-      {'id': 'PONTIAN Master', 'label': 'Pontian', 'icon': '🐟'},
-      {'id': 'MERSING Master', 'label': 'Mersing', 'icon': '🏝️'},
-      {'id': 'BATU-PAHAT Master', 'label': 'B.Pahat', 'icon': '🏛️'},
-      {'id': 'SEGAMAT Master', 'label': 'Segamat', 'icon': '🌾'},
-      {'id': 'TANGKAK Master', 'label': 'Tangkak', 'icon': '🎋'},
-      {'id': 'KLUANG Master', 'label': 'Kluang', 'icon': '☕'},
-    ];
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.trackpad,
+        },
+      ),
+      child: SizedBox(
+        height: 100,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics()),
+          itemCount: badges.length,
+          itemBuilder: (context, index) {
+            final badge = badges[index];
+            final threshold = badge['threshold'] as int;
+            final isEarned = totalStoriesRead >= threshold;
 
-    return SizedBox(
-      height: 100, // Slightly taller for stability
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: badges.length,
-        itemBuilder: (context, index) {
-          final badge = badges[index];
-          final isEarned = earnedIds.contains(badge['id']);
-          return Container(
-            width: itemWidth, // Calculated width
-            margin: const EdgeInsets.only(right: 10),
-            decoration: BoxDecoration(
-              color: isEarned ? const Color(0xFF0A0A0A) : Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: isEarned
-                      ? const Color(0xFF0A0A0A)
-                      : const Color(0xFFF0F0F0)),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(isEarned ? badge['icon']! : '🔒',
-                    style: TextStyle(fontSize: isLarge ? 20 : 18)),
-                const SizedBox(height: 4),
-                FittedBox(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      badge['label']!,
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w700,
-                        color: isEarned ? Colors.white : Colors.grey.shade300,
+            return Container(
+              width: itemWidth,
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(
+                color: isEarned ? const Color(0xFF0A0A0A) : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: isEarned
+                        ? const Color(0xFF0A0A0A)
+                        : const Color(0xFFF0F0F0)),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(isEarned ? badge['icon'] : '🔒',
+                      style: TextStyle(fontSize: isLarge ? 20 : 18)),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        badge['label'],
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w700,
+                          color: isEarned ? Colors.white : Colors.grey.shade400,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _horizontalActivityList(
-      BuildContext context,
-      List<Map<String, dynamic>> items,
-      bool isQuiz,
-      bool isLarge,
-      double width) {
-    final int visibleCount = isLarge ? 4 : 2;
-    final double padding = 40.0;
-    final double spacing = 12.0 * (visibleCount - 1);
-    final double itemWidth = (width - padding - spacing) / visibleCount;
-
-    return SizedBox(
-      height: isLarge ? 240 : 210, // Tall enough so web images don't clip
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        physics: const BouncingScrollPhysics(),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final activity = items[index];
-          final story = activity['story'] as Story;
-          final points = activity['points'] as int;
-
-          return Container(
-            width: itemWidth,
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFF0F0F0)),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2))
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 3, // Give the image more relative space
-                  child: ClipRRect(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        _buildCoverImage(story.coverImageUrl, isQuiz),
-                        _buildPointsBadge(points),
-                      ],
+                  if (!isEarned)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        '$totalStoriesRead / $threshold',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade400,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(story.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 4),
-                      _buildTag(isQuiz),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildCoverImage(String path, bool isQuiz) {
-    final bg = isQuiz ? Colors.orange.shade50 : Colors.grey.shade50;
+  Widget _verticalActivityList(BuildContext context, List<Story> stories) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: stories.length,
+      itemBuilder: (context, index) {
+        final story = stories[index];
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFF0F0F0)),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2))
+            ],
+          ),
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 50,
+                height: 50,
+                child: _buildCoverImage(story.coverImageUrl),
+              ),
+            ),
+            title: Text(
+              story.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCoverImage(String path) {
+    final bg = Colors.blue.shade50;
     if (path.isEmpty) return Container(color: bg);
     if (path.startsWith('http')) {
       return Image.network(path,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(color: bg));
     }
-    final clean = path.replaceFirst('file:///', '');
-    return Image.asset(clean,
+    final clean = path.replaceFirst('file:///', '').replaceFirst('assets/', '');
+    return Image.asset('assets/$clean',
         fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: bg));
   }
 
@@ -496,46 +476,13 @@ class ProgressScreen extends StatelessWidget {
 
   Story _findStoryByTitle(List<Story> stories, String title) {
     return stories.firstWhere(
-      (s) => s.title.trim().toLowerCase() == title.toLowerCase(),
+      (s) => s.title.trim().toLowerCase() == title.trim().toLowerCase(),
       orElse: () => Story(
           id: 'temp',
           title: title,
           description: '',
           coverImageUrl: '',
           pages: []),
-    );
-  }
-
-  Widget _buildPointsBadge(int points) {
-    return Positioned(
-      top: 8,
-      right: 8,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '$points XP',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTag(bool isQuiz) {
-    return Text(
-      isQuiz ? 'Quiz' : 'Story',
-      style: const TextStyle(
-        fontSize: 10,
-        color: Colors.grey,
-        fontWeight: FontWeight.w500,
-      ),
     );
   }
 }

@@ -3,20 +3,18 @@
     "platforms": {
       "android": {
         "default": {
-          "projectId": "little-johor-explorer-db",
-          "appId": "1:1016498515081:android:0f511bcb1879790b902a58",
+          "projectId": "littlejohorexplorer-9ae9c",
+          "appId": "1:287903170664:android:5b3d2212abe1eafa6a7bdd",
           "fileOutput": "android/app/google-services.json"
         }
       },
       "dart": {
         "lib/firebase_options.dart": {
-          "projectId": "little-johor-explorer-db",
+          "projectId": "littlejohorexplorer-9ae9c",
           "configurations": {
-            "android": "1:1016498515081:android:0f511bcb1879790b902a58",
-            "ios": "1:1016498515081:ios:3e450c7a108acf7c902a58",
-            "macos": "1:1016498515081:ios:3e450c7a108acf7c902a58",
-            "web": "1:1016498515081:web:699a2a0bcf0a0765902a58",
-            "windows": "1:1016498515081:web:b05e3767649fb622902a58"
+            "android": "1:287903170664:android:5b3d2212abe1eafa6a7bdd",
+            "ios": "1:287903170664:ios:2ba299a97bce06106a7bdd",
+            "web": "1:287903170664:web:03e990f137ba0f666a7bdd"
           }
         }
       }
@@ -24,7 +22,6 @@
   },
   "functions": [
     {
-      "source": "functions",
       "codebase": "default",
       "disallowLegacyRuntimeConfig": true,
       "ignore": [
@@ -33,7 +30,8 @@
         "firebase-debug.log",
         "firebase-debug.*.log",
         "*.local"
-      ]
+      ],
+      "source": "functions"
     }
   ]
 }

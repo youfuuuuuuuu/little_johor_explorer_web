@@ -16,14 +16,14 @@ class ParentDashboard extends StatefulWidget {
 
 class _ParentDashboardState extends State<ParentDashboard> {
   final List<String> _zooAvatars = [
-    'assets/images/avatars/malayan_tiger.png',
-    'assets/images/avatars/malayan_tapir.png',
-    'assets/images/avatars/capybara.png',
-    'assets/images/avatars/sun_bear.png',
-    'assets/images/avatars/mandrill.png',
-    'assets/images/avatars/saltwater_crocodile.png',
-    'assets/images/avatars/wallaby.png',
-    'assets/images/avatars/greater_flamingo.png',
+    'assets/images/avatars/malayan_tiger.webp',
+    'assets/images/avatars/saltwater_crocodile.webp',
+    'assets/images/avatars/wallaby.webp',
+    'assets/images/avatars/greater_flamingo.webp',
+    'assets/images/avatars/malayan_tapir.webp',
+    'assets/images/avatars/capybara.webp',
+    'assets/images/avatars/sun_bear.webp',
+    'assets/images/avatars/mandrill.webp',
   ];
 
   String _formatScreenTime(int totalMinutes, LanguageService lang) {
@@ -69,7 +69,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
   void _showSuccess(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green, // Green for success
+        backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating));
   }
 
@@ -90,13 +90,12 @@ class _ParentDashboardState extends State<ParentDashboard> {
     final children = user.children;
 
     return Scaffold(
-      backgroundColor: Colors.white, // Threads-style clean background
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(children.length, lang, auth),
-            const Divider(
-                height: 1, color: Color(0xFFEEEEEE)), // Sharp separation
+            const Divider(height: 1, color: Color(0xFFEEEEEE)),
             Expanded(
               child: children.isEmpty
                   ? _buildEmptyState(lang)
@@ -120,11 +119,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
     final children = user.children;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          8, 12, 24, 12), // Adjusted for social alignment
+      padding: const EdgeInsets.fromLTRB(8, 12, 24, 12),
       child: Row(
         children: [
-          // Minimalist Back Trigger
           IconButton(
             onPressed: () => Navigator.maybePop(context),
             icon: const Icon(Icons.arrow_back, color: Colors.black, size: 26),
@@ -137,10 +134,10 @@ class _ParentDashboardState extends State<ParentDashboard> {
                 Text(
                   lang.translate('parent_control'),
                   style: const TextStyle(
-                    fontSize: 24, // Slightly larger
+                    fontSize: 24,
                     fontWeight: FontWeight.w900,
                     color: Colors.black,
-                    letterSpacing: -1.2, // Compressed for modern look
+                    letterSpacing: -1.2,
                   ),
                 ),
                 Text(
@@ -156,7 +153,6 @@ class _ParentDashboardState extends State<ParentDashboard> {
               ],
             ),
           ),
-          // Modern Floating Action Pill
           GestureDetector(
             onTap: () {
               if (children.length >= 5) {
@@ -193,8 +189,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-            color: const Color(0xFFF0F0F0), width: 1), // Flat border logic
+        border: Border.all(color: const Color(0xFFF0F0F0), width: 1),
       ),
       child: StreamBuilder<Map<String, dynamic>>(
         stream: _watchChildStats(child.id),
@@ -211,8 +206,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                 padding: const EdgeInsets.all(1.5),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                      color: Colors.black, width: 1.5), // Meta avatar style
+                  border: Border.all(color: Colors.black, width: 1.5),
                 ),
                 child: CircleAvatar(
                   radius: 24,
@@ -324,9 +318,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
   Widget _buildEmptyState(LanguageService lang) {
     return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Icon(Icons.face_retouching_natural_rounded, // More modern icon
-          size: 64,
-          color: Colors.grey.shade200),
+      Icon(Icons.face_retouching_natural_rounded,
+          size: 64, color: Colors.grey.shade200),
       const SizedBox(height: 16),
       Text(lang.translate('no_childs').toLowerCase(),
           style: TextStyle(
@@ -425,9 +418,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
                         _showError(context, "Please enter email.");
                         return;
                       }
-                      if (passC.text.length < 8) {
+                      if (passC.text.length < 6) {
                         _showError(
-                            context, "Password must be at least 8 characters.");
+                            context, "Password must be at least 6 characters.");
                         return;
                       }
 
@@ -443,7 +436,6 @@ class _ParentDashboardState extends State<ParentDashboard> {
                       setS(() => isSaving = true);
 
                       try {
-                        // Call registration service
                         bool success = await auth.registerChildAccount(
                           email: emailC.text.trim(),
                           password: passC.text,
@@ -460,10 +452,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                   : "Child account successfully registered!");
                         }
                       } catch (e) {
-                        // ⭐️ 3. Catch & Display Firebase/Auth Errors
                         if (mounted) {
                           setS(() => isSaving = false);
-                          // Clean up the error message string
                           String cleanError =
                               e.toString().replaceAll('Exception: ', '');
                           _showError(context, cleanError);
@@ -506,11 +496,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
     String avatar = child.avatarUrl ?? _zooAvatars[0];
     bool isSaving = false;
 
-    // 💡 提示：我们已经删除了 passC, confC 以及 obsP, obsC 变量，代码更干净了！
-
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent clicking outside while saving
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setS) => AlertDialog(
           backgroundColor: const Color(0xFFF8F9FE),
@@ -523,7 +511,6 @@ class _ParentDashboardState extends State<ParentDashboard> {
             width: 450,
             child: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                // ── 头像选择 ──
                 GestureDetector(
                   onTap: () => _openAvatarPicker(
                       context, lang, (p) => setS(() => avatar = p)),
@@ -545,8 +532,6 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   ),
                 ),
                 const SizedBox(height: 25),
-
-                // ── 基本信息 ──
                 _buildCardWrapper(
                     title: lang.translate('user_info'),
                     children: [
@@ -561,15 +546,12 @@ class _ParentDashboardState extends State<ParentDashboard> {
                           icon: Icons.email_outlined),
                     ]),
                 const SizedBox(height: 20),
-
-                // ── 安全与密码重置 (使用新逻辑) ──
                 _buildCardWrapper(title: lang.translate('security'), children: [
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         try {
-                          // 直接调用 AuthService 发送重置邮件给该孩子账号
                           await auth.sendPasswordReset(emailC.text);
 
                           if (context.mounted) {
@@ -633,7 +615,6 @@ class _ParentDashboardState extends State<ParentDashboard> {
               onPressed: isSaving
                   ? null
                   : () async {
-                      // 验证名字不能为空
                       if (nameC.text.trim().isEmpty) {
                         _showError(context, "Name cannot be empty.");
                         return;
@@ -642,7 +623,6 @@ class _ParentDashboardState extends State<ParentDashboard> {
                       setS(() => isSaving = true);
 
                       try {
-                        // 💡 注意这里：调用 editChild 时不再需要传递 newPassword
                         await auth.editChild(
                             childId: child.id,
                             newName: nameC.text.trim(),
@@ -728,8 +708,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
         labelStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
         prefixIcon: Icon(icon, color: Colors.black, size: 18),
         filled: true,
-        fillColor:
-            const Color(0xFFFAFAFA), // Neutral light gray instead of purple
+        fillColor: const Color(0xFFFAFAFA),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
@@ -750,7 +729,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5), // Flat neutral background
+        color: const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFEEEEEE)),
       ),
@@ -834,7 +813,6 @@ class _ParentDashboardState extends State<ParentDashboard> {
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          // Drag handle for that native feel
           Container(
             width: 40,
             height: 4,
@@ -908,8 +886,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                       Navigator.pop(ctx);
                     },
                     style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color(0xFFFF3B30), // iOS/Insta style Red
+                        backgroundColor: const Color(0xFFFF3B30),
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(

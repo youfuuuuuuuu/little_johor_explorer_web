@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:little_johor_explorer/data/services/story_service.dart';
 import 'package:little_johor_explorer/core/constants/routes.dart';
 import 'package:little_johor_explorer/data/services/auth_service.dart';
 import 'package:little_johor_explorer/data/services/local_storage_service.dart';
@@ -49,13 +50,21 @@ class _LoginScreenState extends State<LoginScreen> {
         final authService = Provider.of<AuthService>(context, listen: false);
         final storage =
             Provider.of<LocalStorageService>(context, listen: false);
-        final success = await authService.login(
+        final storyService = Provider.of<StoryService>(context, listen: false);
+
+        final String? errorMessage = await authService.login(
           email: _emailController.text.trim(),
           password: _passwordController.text,
           storage: storage,
         );
 
-        if (success && mounted) {
+        if (errorMessage == null && mounted) {
+          // 2. Pre-fetch data and WAIT for it to finish
+          await storyService.fetchStoriesFromFirebase();
+
+          // 3. Re-check mounted status after the network call
+          if (!mounted) return;
+
           Navigator.pushAndRemoveUntil(
             context,
             PageRouteBuilder(
@@ -66,16 +75,23 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             (route) => false,
           );
+        } else if (errorMessage != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(e.toString().replaceAll('Exception: ', '')),
+              content: Text("An unknown error occurred: ${e.toString()}"),
               backgroundColor: Colors.redAccent,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
             ),
           );
         }
@@ -87,8 +103,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("LoginScreen build()");
     return Scaffold(
-      backgroundColor: Colors.white, // Pure white for that Threads look
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -98,7 +115,6 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Minimalist Logo pattern
                   const Icon(
                     Icons.auto_stories_rounded,
                     size: 48,
@@ -111,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
                       color: Colors.black,
-                      letterSpacing: -1.5, // Tight tracking like Threads
+                      letterSpacing: -1.5,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -124,12 +140,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 48),
-
-                  // Inputs are now flat and spaced
                   CustomTextField(
                     controller: _emailController,
                     labelText: 'email',
-                    // Note: Ensure your CustomTextField supports a minimalist decoration
                     prefixIcon: const Icon(Icons.alternate_email_rounded,
                         size: 20, color: Colors.black54),
                     validator: (value) =>
@@ -153,11 +166,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
-                    validator: (value) => (value == null || value.length < 8)
-                        ? 'Minimum 8 characters'
+                    validator: (value) => (value == null || value.length < 6)
+                        ? 'Minimum 6 characters'
                         : null,
                   ),
-
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -171,9 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 32),
-
                   _isLoading
                       ? const CircularProgressIndicator(
                           color: Colors.black, strokeWidth: 2)
@@ -187,8 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                    16), // High-radius pill
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
                             child: const Text(
@@ -198,10 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-
                   const SizedBox(height: 24),
-
-                  // Footer link
                   TextButton(
                     onPressed: () =>
                         Navigator.pushNamed(context, Routes.register),

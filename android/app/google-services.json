@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "1016498515081",
-    "project_id": "little-johor-explorer-db",
-    "storage_bucket": "little-johor-explorer-db.firebasestorage.app"
+    "project_number": "287903170664",
+    "project_id": "littlejohorexplorer-9ae9c",
+    "storage_bucket": "littlejohorexplorer-9ae9c.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1016498515081:android:0f511bcb1879790b902a58",
+        "mobilesdk_app_id": "1:287903170664:android:5b3d2212abe1eafa6a7bdd",
         "android_client_info": {
           "package_name": "com.example.little_johor_explorer"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDtOUweOMApF0xBH7KLKGI09N7vOZtjUZM"
+          "current_key": "AIzaSyB777_GDveFzUWVkCTavEUgoprGzAwgja8"
         }
       ],
       "services": {

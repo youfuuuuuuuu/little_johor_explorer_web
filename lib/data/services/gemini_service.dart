@@ -1,17 +1,22 @@
-import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/material.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:little_johor_explorer/core/config/app_config.dart';
 
 class GeminiService extends ChangeNotifier {
-  late GenerativeModel _model;
-
+  late final GenerativeModel _model;
   final Map<String, ChatSession> _userChats = {};
   final Map<String, List<Content>> _userHistories = {};
-  String _currentUserId = "unknown";
 
   GeminiService() {
-    final vertexAI = FirebaseAI.vertexAI();
-    _model = vertexAI.generativeModel(
-      model: 'gemini-2.5-flash-lite',
+    _initModel();
+  }
+
+  void _initModel() {
+    final apiKey = AppConfig.geminiApiKey;
+
+    _model = GenerativeModel(
+      model: 'gemini-3.1-flash-lite',
+      apiKey: apiKey,
       systemInstruction: Content.system(
           "You are Mr. Knowledge (En. Pengetahuan), a friendly and fun AI guide for the 'Little Johor Explorer' app. "
           "\n\nFORMATTING RULES:"
@@ -40,38 +45,37 @@ class GeminiService extends ChangeNotifier {
   }
 
   void initUserSession(String userId) {
-    _currentUserId = userId;
     if (!_userChats.containsKey(userId)) {
       _userChats[userId] = _model.startChat();
       _userHistories[userId] = [];
     }
   }
 
-  List<Content> get history => _userHistories[_currentUserId] ?? [];
+  List<Content> getHistory(String userId) => _userHistories[userId] ?? [];
 
-  Future<String> chatWithHistory(String message) async {
+  Future<String> chatWithHistory(String userId, String message) async {
     try {
-      if (!_userChats.containsKey(_currentUserId)) {
-        initUserSession(_currentUserId);
+      if (!_userChats.containsKey(userId)) {
+        initUserSession(userId);
       }
 
-      final chat = _userChats[_currentUserId]!;
+      final chat = _userChats[userId]!;
       final response = await chat.sendMessage(Content.text(message));
       final text = response.text ?? "I'm sorry, I couldn't process that.";
 
-      _userHistories[_currentUserId] = chat.history.toList();
+      _userHistories[userId] = chat.history.toList();
       notifyListeners();
       return text;
     } catch (e) {
-      debugPrint("Vertex AI Error: $e");
+      debugPrint("Gemini Developer API Error: $e");
       return "Error connecting to guide.";
     }
   }
 
-  void clearChat() {
-    if (_userChats.containsKey(_currentUserId)) {
-      _userChats[_currentUserId] = _model.startChat();
-      _userHistories[_currentUserId] = [];
+  void clearChat(String userId) {
+    if (_userChats.containsKey(userId)) {
+      _userChats[userId] = _model.startChat();
+      _userHistories[userId] = [];
       notifyListeners();
     }
   }

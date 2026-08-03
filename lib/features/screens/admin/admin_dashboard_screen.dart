@@ -5,6 +5,7 @@ import 'package:little_johor_explorer/data/services/language_service.dart';
 import 'package:little_johor_explorer/features/screens/admin/manage_story_screen.dart';
 import 'package:little_johor_explorer/features/screens/admin/manage_quiz_screen.dart';
 import 'package:little_johor_explorer/data/models/story.dart';
+import 'package:little_johor_explorer/features/screens/main_wrapper.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -48,8 +49,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
       bool searchMatch = _searchQuery.isEmpty ||
           storyTitle.contains(_searchQuery.toLowerCase());
+
       bool themeMatch = _selectedThemes.isEmpty ||
           _selectedThemes.any((t) => storyTags.contains(t.toLowerCase()));
+
       bool districtMatch = _selectedDistricts.isEmpty ||
           _selectedDistricts.any((d) {
             String targetWithDash = d.toLowerCase().replaceAll(' ', '-');
@@ -63,6 +66,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     bool isFiltering = _searchQuery.isNotEmpty ||
         _selectedThemes.isNotEmpty ||
         _selectedDistricts.isNotEmpty;
+
     final displayList = _isSortingMode ? _sortableStories : filteredStories;
 
     return Scaffold(
@@ -109,11 +113,76 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _isSortingMode ? null : _buildDualFab(storyService),
+      floatingActionButton: _isSortingMode
+          ? null
+          : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FloatingActionButton.extended(
+                    heroTag: 'add_quiz',
+                    onPressed: () => _showStorySelector(context, storyService),
+                    backgroundColor: Colors.white,
+                    icon: const Icon(Icons.quiz_rounded, color: Colors.black),
+                    label: const Text("Add Quiz",
+                        style: TextStyle(color: Colors.black)),
+                  ),
+                  const SizedBox(width: 12),
+                  FloatingActionButton.extended(
+                    heroTag: 'add_story_global_btn',
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => ManageStoryScreen())),
+                    backgroundColor: Colors.black,
+                    icon: const Icon(Icons.add_rounded, color: Colors.white),
+                    label: const Text("Add Story",
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 
-  // --- UI Helper Methods (Inside the State Class) ---
+  void _showStorySelector(BuildContext context, StoryService service) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text("Select a Story",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: service.stories.length,
+                itemBuilder: (context, index) {
+                  final story = service.stories[index];
+                  return ListTile(
+                    title: Text(story.title),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => ManageQuizScreen(story: story)),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Widget _buildTopBar(StoryService storyService) {
     return Padding(
@@ -122,7 +191,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black, size: 26),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const MainWrapper()),
+                (route) => false,
+              );
+            },
           ),
           const SizedBox(width: 4),
           const Text(
@@ -265,19 +340,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   width: 48,
                   height: 48,
                   color: const Color(0xFFF5F5F5),
-                  child: story.coverImageUrl.startsWith('http')
-                      ? Image.network(story.coverImageUrl, fit: BoxFit.cover)
+                  child: story.coverImageUrl.isNotEmpty
+                      ? (story.coverImageUrl.startsWith('http')
+                          ? Image.network(story.coverImageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.image_outlined,
+                                  color: Colors.grey,
+                                  size: 20))
+                          : Image.asset(story.coverImageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.image_outlined,
+                                  color: Colors.grey,
+                                  size: 20)))
                       : const Icon(Icons.image_outlined,
                           color: Colors.grey, size: 20),
                 ),
               ),
         title: Text(
-          story.title ?? "untitled",
+          story.title,
           style: const TextStyle(
               fontWeight: FontWeight.w800, fontSize: 15, color: Colors.black),
         ),
         subtitle: Text(
-          "#${story.tags?.join(' #').toLowerCase()}",
+          "#${story.tags.join(' #').toLowerCase()}",
           style: TextStyle(
               color: Colors.grey.shade400,
               fontSize: 10,
@@ -329,43 +416,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildDualFab(StoryService storyService) {
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _fabPart("quiz", Icons.add_task_rounded,
-              () => _showStoryPickerForQuiz(context, storyService.stories)),
-          Container(width: 1, height: 20, color: Colors.white24),
-          _fabPart(
-              "story",
-              Icons.add_rounded,
-              () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => ManageStoryScreen(
-                          nextOrderIndex: storyService.stories.length)))),
-        ],
-      ),
-    );
-  }
-
-  Widget _fabPart(String label, IconData icon, VoidCallback onTap) {
-    return TextButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, color: Colors.white, size: 20),
-      label: Text(label.toLowerCase(),
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w800)),
-    );
-  }
-
   Widget _buildStatusBanner(String text, Color color) {
     return Container(
       width: double.infinity,
@@ -408,24 +458,56 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       color: Colors.grey,
                       fontSize: 12)),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: _themes
-                    .map((t) => FilterChip(
-                          label: Text(lang.translate(t.toLowerCase())),
-                          selected: _selectedThemes.contains(t),
-                          onSelected: (val) {
-                            setState(() {
-                              val
-                                  ? _selectedThemes.add(t)
-                                  : _selectedThemes.remove(t);
-                              if (_selectedThemes.isNotEmpty)
-                                _isSortingMode = false;
-                            });
-                            setDialogState(() {});
-                          },
-                        ))
-                    .toList(),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8.0,
+                  children: _themes
+                      .map((t) => FilterChip(
+                            label: Text(lang.translate(t.toLowerCase())),
+                            selected: _selectedThemes.contains(t),
+                            selectedColor: Colors.orange.shade100,
+                            onSelected: (val) {
+                              setState(() {
+                                val
+                                    ? _selectedThemes.add(t)
+                                    : _selectedThemes.remove(t);
+                              });
+                              setDialogState(() {});
+                            },
+                          ))
+                      .toList(),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text("Districts",
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                      fontSize: 12)),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8.0,
+                  children: _districts
+                      .map((d) => FilterChip(
+                            label: Text(d),
+                            selected: _selectedDistricts.contains(d),
+                            selectedColor: Colors.lightBlue.shade100,
+                            onSelected: (val) {
+                              setState(() {
+                                val
+                                    ? _selectedDistricts.add(d)
+                                    : _selectedDistricts.remove(d);
+                              });
+                              setDialogState(() {});
+                            },
+                          ))
+                      .toList(),
+                ),
               ),
               const SizedBox(height: 30),
               SizedBox(
@@ -445,44 +527,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         );
       }),
-    );
-  }
-
-  void _showStoryPickerForQuiz(BuildContext context, List<Story> stories) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Text("Select Story",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: stories.length,
-                itemBuilder: (context, index) => ListTile(
-                  leading: const Icon(Icons.quiz_rounded, color: Colors.orange),
-                  title: Text(stories[index].title,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w600)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                                ManageQuizScreen(story: stories[index])));
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

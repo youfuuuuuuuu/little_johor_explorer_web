@@ -5,9 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:little_johor_explorer/data/services/gemini_service.dart';
 import 'package:little_johor_explorer/data/services/auth_service.dart';
 import 'package:little_johor_explorer/data/services/language_service.dart';
-import 'package:little_johor_explorer/core/widgets/message_bubble.dart';
-import 'package:firebase_ai/firebase_ai.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:little_johor_explorer/core/widgets/message_bubble.dart';
 
 class ChatWithHistoryScreen extends StatefulWidget {
   const ChatWithHistoryScreen({super.key});
@@ -16,10 +16,13 @@ class ChatWithHistoryScreen extends StatefulWidget {
   State<ChatWithHistoryScreen> createState() => _ChatWithHistoryScreenState();
 }
 
-class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
+class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen>
+    with SingleTickerProviderStateMixin {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isTyping = false;
+  bool _isSending = false;
+
   final List<Map<String, dynamic>> _chatMessages = [];
 
   stt.SpeechToText? _speech;
@@ -82,6 +85,8 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
     String existingText = _messageController.text;
     await _speech!.listen(
       onResult: (val) {
+        if (_isSending) return;
+
         if (mounted && val.recognizedWords.isNotEmpty) {
           setState(() {
             String newWords = val.recognizedWords;
@@ -144,11 +149,12 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
 
   void _stopTimerAndListening() {
     _timer?.cancel();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _isListening = false;
         _recordDuration = 0;
       });
+    }
   }
 
   void _toggleSttLocale() => setState(() {
@@ -168,13 +174,18 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
       final geminiService = Provider.of<GeminiService>(context, listen: false);
       final authService = Provider.of<AuthService>(context, listen: false);
       final lang = Provider.of<LanguageService>(context, listen: false);
+
       final currentUser = authService.currentUser;
-      geminiService.initUserSession(currentUser?.id ?? "unknown");
+      final String userId = currentUser?.id ?? "unknown";
+
+      geminiService.initUserSession(userId);
       _chatMessages.clear();
 
-      if (geminiService.history.isNotEmpty) {
+      final userHistory = geminiService.getHistory(userId);
+
+      if (userHistory.isNotEmpty) {
         setState(() {
-          for (var msg in geminiService.history) {
+          for (var msg in userHistory) {
             final isUser = msg.role == 'user';
             final text =
                 msg.parts.whereType<TextPart>().map((e) => e.text).join();
@@ -209,12 +220,22 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
   void _sendMessage({String? quickText}) async {
     final message = quickText ?? _messageController.text.trim();
     if (message.isEmpty) return;
+
+    setState(() {
+      _isSending = true;
+    });
+
     if (_isListening) {
-      _speech?.stop();
       _stopTimerAndListening();
+      await _speech?.stop();
     }
+
     _messageController.clear();
+    _lastFullText = "";
+
     final authService = Provider.of<AuthService>(context, listen: false);
+    final String userId = authService.currentUser?.id ?? "unknown";
+
     setState(() {
       _chatMessages.add({
         'text': message,
@@ -224,13 +245,17 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
         'time': DateTime.now(),
       });
       _isTyping = true;
+      _isSending = false;
     });
     _scrollToBottom();
+
     try {
       final geminiService = Provider.of<GeminiService>(context, listen: false);
+
       final responseText = await geminiService
-          .chatWithHistory(message)
+          .chatWithHistory(userId, message)
           .timeout(const Duration(seconds: 15));
+
       if (mounted) {
         setState(() {
           _chatMessages.add({
@@ -300,7 +325,6 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
         titleSpacing: 20,
         title: Row(
           children: [
-            // Bot avatar
             Container(
               width: 36,
               height: 36,
@@ -355,9 +379,7 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
       ),
       body: Column(
         children: [
-          // Divider
           Container(height: 0.5, color: const Color(0xFFE8E8E8)),
-          // Messages
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -386,11 +408,8 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
               },
             ),
           ),
-          // Typing indicator
           if (_isTyping) _typingIndicator(lang),
-          // Quick prompts
           _quickPrompts(lang),
-          // Input
           _inputBar(lang),
         ],
       ),
@@ -453,7 +472,6 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
               crossAxisAlignment:
                   isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                // Bubble
                 Container(
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.72,
@@ -479,14 +497,9 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
                       )
                     ],
                   ),
-                  child: Text(
-                    msg['text'],
-                    style: TextStyle(
-                      color: isUser ? Colors.white : const Color(0xFF0A0A0A),
-                      fontSize: 14,
-                      height: 1.5,
-                      fontWeight: FontWeight.w400,
-                    ),
+                  child: MessageBubble(
+                    message: msg['text'],
+                    isUser: isUser,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -516,7 +529,7 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
 
   Widget _typingIndicator(LanguageService lang) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Row(
         children: [
           Container(
@@ -531,45 +544,15 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-                bottomLeft: Radius.circular(4),
-              ),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFF0F0F0)),
             ),
-            child: Row(
-              children: [
-                _dot(0),
-                const SizedBox(width: 4),
-                _dot(150),
-                const SizedBox(width: 4),
-                _dot(300),
-              ],
-            ),
+            child: const ThinkingDots(),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _dot(int delayMs) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.4, end: 1.0),
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeInOut,
-      builder: (_, val, __) => Opacity(
-        opacity: val,
-        child: Container(
-          width: 6,
-          height: 6,
-          decoration: const BoxDecoration(
-              color: Color(0xFF0A0A0A), shape: BoxShape.circle),
-        ),
       ),
     );
   }
@@ -686,7 +669,6 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              // Language toggle (when idle)
               if (!_isListening && _messageController.text.isEmpty)
                 _iconBtn(
                   onTap: _toggleSttLocale,
@@ -700,7 +682,6 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
                   color: Colors.white,
                   border: true,
                 ),
-              // Send (when text entered)
               if (_messageController.text.isNotEmpty)
                 _iconBtn(
                   onTap: () => _sendMessage(),
@@ -709,7 +690,6 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
                   color: const Color(0xFF0A0A0A),
                 ),
               const SizedBox(width: 6),
-              // Mic
               _iconBtn(
                 onTap: _listen,
                 child: Icon(
@@ -776,7 +756,12 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
                   style: TextStyle(color: Colors.grey.shade500))),
           TextButton(
               onPressed: () {
-                Provider.of<GeminiService>(context, listen: false).clearChat();
+                final userId = Provider.of<AuthService>(context, listen: false)
+                        .currentUser
+                        ?.id ??
+                    "unknown";
+                Provider.of<GeminiService>(context, listen: false)
+                    .clearChat(userId);
                 setState(() => _chatMessages.clear());
                 Navigator.pop(ctx);
               },
@@ -784,6 +769,84 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen> {
                   style: const TextStyle(
                       color: Colors.redAccent, fontWeight: FontWeight.w700))),
         ],
+      ),
+    );
+  }
+}
+
+class ThinkingDots extends StatefulWidget {
+  const ThinkingDots({super.key});
+
+  @override
+  State<ThinkingDots> createState() => _ThinkingDotsState();
+}
+
+class _ThinkingDotsState extends State<ThinkingDots>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildDot(0.0, 0.4),
+        _buildDot(0.2, 0.6),
+        _buildDot(0.4, 0.8),
+      ],
+    );
+  }
+
+  Widget _buildDot(double start, double end) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final yOffset = TweenSequence<double>([
+          TweenSequenceItem(
+              tween: Tween(begin: 0.0, end: -6.0)
+                  .chain(CurveTween(curve: Curves.easeOutCubic)),
+              weight: 1),
+          TweenSequenceItem(
+              tween: Tween(begin: -6.0, end: 0.0)
+                  .chain(CurveTween(curve: Curves.easeInCubic)),
+              weight: 1),
+        ])
+            .animate(
+              CurvedAnimation(
+                parent: _controller,
+                curve: Interval(start, end, curve: Curves.linear),
+              ),
+            )
+            .value;
+
+        return Transform.translate(
+          offset: Offset(0, yOffset),
+          child: child,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        width: 6,
+        height: 6,
+        decoration: const BoxDecoration(
+          color: Color(0xFF0A0A0A),
+          shape: BoxShape.circle,
+        ),
       ),
     );
   }

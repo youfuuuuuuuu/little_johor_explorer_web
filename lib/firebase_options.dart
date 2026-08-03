@@ -17,37 +17,31 @@ class DefaultFirebaseOptions {
       case TargetPlatform.windows:
         return windows;
       default:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions are not supported for this platform.',
-        );
+        return windows;
     }
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyB_Q43wQxA2VyDSqgiQtoAY9bwkhr1saHo',
-    appId: '1:1016498515081:web:699a2a0bcf0a0765902a58',
-    messagingSenderId: '1016498515081',
-    projectId: 'little-johor-explorer-db',
-    authDomain: 'little-johor-explorer-db.firebaseapp.com',
-    storageBucket: 'little-johor-explorer-db.firebasestorage.app',
-    measurementId: 'G-0G7TDVB0P3',
+    apiKey: 'AIzaSyCWLzBssj6jevxtOXMUPZnam7ZuzoIUveg',
+    appId: '1:287903170664:web:03e990f137ba0f666a7bdd',
+    messagingSenderId: '287903170664',
+    projectId: 'littlejohorexplorer-9ae9c',
+    authDomain: 'littlejohorexplorer-9ae9c.firebaseapp.com',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDtOUweOMApF0xBH7KLKGI09N7vOZtjUZM',
-    appId: '1:1016498515081:android:0f511bcb1879790b902a58',
-    messagingSenderId: '1016498515081',
-    projectId: 'little-johor-explorer-db',
-    storageBucket: 'little-johor-explorer-db.firebasestorage.app',
+    apiKey: 'AIzaSyB777_GDveFzUWVkCTavEUgoprGzAwgja8',
+    appId: '1:287903170664:android:5b3d2212abe1eafa6a7bdd',
+    messagingSenderId: '287903170664',
+    projectId: 'littlejohorexplorer-9ae9c',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDhZxCaj4EIF57apWJyLcuSdreuUwrLH_g',
-    appId: '1:1016498515081:ios:3e450c7a108acf7c902a58',
-    messagingSenderId: '1016498515081',
-    projectId: 'little-johor-explorer-db',
-    storageBucket: 'little-johor-explorer-db.firebasestorage.app',
-    iosBundleId: 'com.littlejohorexplorer.app',
+    apiKey: 'AIzaSyCXh2TTXRvWd8UtfcFdGRGrv84fN4EdpG4',
+    appId: '1:287903170664:ios:2ba299a97bce06106a7bdd',
+    messagingSenderId: '287903170664',
+    projectId: 'littlejohorexplorer-9ae9c',
+    iosBundleId: 'com.example.littleJohorExplorer',
   );
 
   static FirebaseOptions get macos => ios;

@@ -28,7 +28,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  // ── 仅保存基本信息的修改 ──────────────────────────────────────────────────
   Future<void> _saveChanges() async {
     final auth = Provider.of<AuthService>(context, listen: false);
     final lang = Provider.of<LanguageService>(context, listen: false);
@@ -58,7 +57,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  // ── 发送密码重置邮件 ─────────────────────────────────────────────────────
   Future<void> _sendPasswordResetEmail(
       AuthService auth, LanguageService lang) async {
     final email = auth.currentUser?.email;
@@ -124,7 +122,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               physics: const BouncingScrollPhysics(),
               child: Column(
                 children: [
-                  // --- Avatar Section ---
                   Center(
                     child: Container(
                       padding: const EdgeInsets.all(2),
@@ -146,8 +143,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
-
-                  // --- User Info Card ---
                   _buildCardWrapper(
                     title: lang.translate('user_info'),
                     children: [
@@ -165,8 +160,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // --- Security Card (Replaced with Email Button) ---
                   if (canChangePassword)
                     _buildCardWrapper(
                       title: lang.translate('security'),
@@ -205,7 +198,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         )
                       ],
                     ),
-
                   if (!canChangePassword)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -220,10 +212,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             fontStyle: FontStyle.italic),
                       ),
                     ),
-
                   const SizedBox(height: 40),
-
-                  // --- Primary Action Pill (Save Name Changes) ---
                   SizedBox(
                     width: double.infinity,
                     height: 54,
@@ -257,7 +246,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  // ── UI Helpers (Keep exactly as you designed them) ────────────────────────
   Widget _buildCardWrapper(
       {required String title, required List<Widget> children}) {
     return Container(

@@ -19,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
   final List<String> _selectedThemes = [];
   final List<String> _selectedDistricts = [];
   bool _searchFocused = false;
@@ -49,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _searchFocus.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -90,7 +92,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // ── Top bar ──────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -121,7 +122,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    // Language toggle
                     GestureDetector(
                       onTap: () => lang.toggleLanguage(),
                       child: Container(
@@ -146,7 +146,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // Avatar
                     CircleAvatar(
                       radius: 20,
                       backgroundColor: const Color(0xFFF0F0F0),
@@ -161,8 +160,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // ── Search bar ───────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
@@ -191,6 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               : [],
                         ),
                         child: TextField(
+                          controller: _searchController,
                           focusNode: _searchFocus,
                           onChanged: (v) => setState(() => _searchQuery = v),
                           style: const TextStyle(
@@ -205,8 +203,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ? IconButton(
                                     icon: Icon(Icons.close_rounded,
                                         color: Colors.grey.shade400, size: 18),
-                                    onPressed: () =>
-                                        setState(() => _searchQuery = ''),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
                                   )
                                 : null,
                             border: InputBorder.none,
@@ -217,7 +217,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // Filter button
                     GestureDetector(
                       onTap: () => _showFilterSheet(lang),
                       child: AnimatedContainer(
@@ -252,8 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // ── Active filter chips ───────────────────────────────────────
             if (_selectedThemes.isNotEmpty || _selectedDistricts.isNotEmpty)
               SliverToBoxAdapter(
                 child: SizedBox(
@@ -271,8 +268,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-
-            // ── Role quick actions (between search and Featured Stories) ──
             if (isParent || isAdmin)
               SliverToBoxAdapter(
                 child: Padding(
@@ -302,8 +297,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-
-            // ── Stories section ───────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 14),
@@ -314,7 +307,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Search subtitle — only shown when searching, sits above title
                           if (_searchQuery.isNotEmpty) ...[
                             Text(
                               '${lang.translate('results_for')} "$_searchQuery"',
@@ -326,7 +318,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 3),
                           ],
-                          // "Featured Stories" always visible
                           Text(
                             lang.translate('featured_stories'),
                             style: const TextStyle(
@@ -350,8 +341,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // ── Stories — horizontal scroll, 2 rows mobile / 4 rows web ──
             storyService.isLoading
                 ? const SliverToBoxAdapter(
                     child: Center(
@@ -369,8 +358,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: _horizontalStoryGrid(
                             context, filteredStories, false),
                       ),
-
-            // ── Quizzes section header ────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 32, 20, 14),
@@ -397,15 +384,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // ── Quizzes — same horizontal scroll layout ───────────────────
             quizStories.isEmpty
                 ? SliverToBoxAdapter(
                     child: _emptyState(lang.translate('no_quizzes_found')))
                 : SliverToBoxAdapter(
                     child: _horizontalStoryGrid(context, quizStories, true),
                   ),
-
             const SliverToBoxAdapter(child: SizedBox(height: 40)),
           ],
         ),
@@ -427,7 +411,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final double availableW = screenW - sidePad - peekWidth;
         final double cardW = (availableW - gap * visibleCols) / visibleCols;
-        final double cardH = cardW / 0.72;
+        final double cardH = cardW + 55.0;
+
         final int total = stories.length;
         final int ceilHalf = (total / 2).ceil();
         final int topCount = total <= visibleCols
@@ -436,57 +421,61 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? visibleCols
                 : ceilHalf;
         final int bottomCount = total - topCount;
-
-        // Number of columns = topCount (top row is always longer or equal)
         final int colCount = topCount;
-
-        return SizedBox(
-          height: cardH * 2 + gap,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.only(left: sidePad, right: sidePad),
-            itemCount: colCount,
-            itemBuilder: (context, colIndex) {
-              // Top row: index 0 → topCount-1  (sequential left to right)
-              final int topStoryIndex = colIndex;
-
-              // Bottom row: index topCount → total-1
-              final int bottomStoryIndex = topCount + colIndex;
-              final bool hasBottom = bottomStoryIndex < total;
-
-              return Container(
-                width: cardW,
-                margin:
-                    EdgeInsets.only(right: colIndex == colCount - 1 ? 0 : gap),
-                child: Column(
-                  children: [
-                    // Top card
-                    SizedBox(
-                      height: cardH,
-                      child:
-                          _storyCard(context, stories[topStoryIndex], isQuiz),
-                    ),
-                    SizedBox(height: gap),
-                    // Bottom card — empty placeholder keeps row height consistent
-                    SizedBox(
-                      height: cardH,
-                      child: hasBottom
-                          ? _storyCard(
-                              context, stories[bottomStoryIndex], isQuiz)
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
-                ),
-              );
+        final bool isTwoRows = total > topCount;
+        return ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(
+            dragDevices: {
+              PointerDeviceKind.touch,
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.trackpad,
             },
+          ),
+          child: SizedBox(
+            height: isTwoRows ? (cardH * 2 + gap) : cardH,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics()),
+              padding: const EdgeInsets.only(left: sidePad, right: sidePad),
+              itemCount: colCount,
+              itemBuilder: (context, colIndex) {
+                final int topStoryIndex = colIndex;
+                final int bottomStoryIndex = topCount + colIndex;
+                final bool hasBottom = bottomStoryIndex < total;
+
+                return Container(
+                  width: cardW,
+                  margin: EdgeInsets.only(
+                      right: colIndex == colCount - 1 ? 0 : gap),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: cardH,
+                        child:
+                            _storyCard(context, stories[topStoryIndex], isQuiz),
+                      ),
+                      if (isTwoRows) ...[
+                        const SizedBox(height: gap),
+                        SizedBox(
+                          height: cardH,
+                          child: hasBottom
+                              ? _storyCard(
+                                  context, stories[bottomStoryIndex], isQuiz)
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         );
       },
     );
   }
 
-  // ── Story card ────────────────────────────────────────────────────────────
   Widget _storyCard(BuildContext context, Story story, bool isQuiz) {
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -513,8 +502,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cover image
-            Expanded(
+            AspectRatio(
+              aspectRatio: 1.0,
               child: ClipRRect(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(16)),
@@ -523,7 +512,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     _buildImage(story.coverImageUrl,
                         isQuiz ? Colors.orange.shade50 : Colors.grey.shade50),
-                    // Quiz badge overlay
                     if (isQuiz)
                       Positioned(
                         top: 10,
@@ -555,11 +543,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            // Info
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     story.title,
@@ -572,11 +560,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       letterSpacing: -0.2,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Row(
                     children: [
                       Icon(Icons.location_on_outlined,
-                          size: 11, color: Colors.grey.shade400),
+                          size: 10, color: Colors.grey.shade400),
                       const SizedBox(width: 2),
                       Expanded(
                         child: Text(
@@ -584,28 +572,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             color: Colors.grey.shade400,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      if (!isQuiz)
-                        Row(
-                          children: [
-                            Icon(Icons.schedule_rounded,
-                                size: 11, color: Colors.grey.shade400),
-                            const SizedBox(width: 2),
-                            Text(
-                              '${story.estimatedReadingTime}m',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade400,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
                     ],
                   ),
                 ],

@@ -13,14 +13,14 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final List<String> _zooAvatars = [
-    'assets/images/avatars/malayan_tiger.png',
-    'assets/images/avatars/malayan_tapir.png',
-    'assets/images/avatars/capybara.png',
-    'assets/images/avatars/sun_bear.png',
-    'assets/images/avatars/mandrill.png',
-    'assets/images/avatars/saltwater_crocodile.png',
-    'assets/images/avatars/wallaby.png',
-    'assets/images/avatars/greater_flamingo.png',
+    'assets/images/avatars/malayan_tiger.webp',
+    'assets/images/avatars/saltwater_crocodile.webp',
+    'assets/images/avatars/wallaby.webp',
+    'assets/images/avatars/greater_flamingo.webp',
+    'assets/images/avatars/malayan_tapir.webp',
+    'assets/images/avatars/capybara.webp',
+    'assets/images/avatars/sun_bear.webp',
+    'assets/images/avatars/mandrill.webp',
   ];
 
   void _showAvatarPicker(
@@ -111,7 +111,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              // ── Top header ──────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Text(
@@ -124,8 +123,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-
-              // ── Avatar + name card ───────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                 child: Container(
@@ -143,7 +140,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      // Avatar with edit button
                       Stack(
                         children: [
                           CircleAvatar(
@@ -178,7 +174,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                       const SizedBox(width: 16),
-                      // Name + role + email
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,8 +222,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-
-              // ── Menu items ───────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Container(
@@ -276,8 +269,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-
-              // ── App info ─────────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
                 child: Column(
@@ -395,7 +386,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       BuildContext context, AuthService auth, LanguageService lang) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
         title: Text(
@@ -413,15 +404,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(lang.translate('cancel'),
                   style: TextStyle(color: Colors.grey.shade500))),
           TextButton(
             onPressed: () async {
-              await auth.deleteAccount();
-              if (context.mounted) {
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil('/login', (route) => false);
+              Navigator.pop(dialogContext);
+
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (loadingContext) => const Center(
+                  child: CircularProgressIndicator(color: Colors.redAccent),
+                ),
+              );
+
+              try {
+                await auth.deleteAccount();
+
+                if (context.mounted) {
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        lang.currentLanguage == 'ms'
+                            ? 'Akaun berjaya dipadam secara kekal.'
+                            : 'Account successfully terminated.',
+                      ),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  );
+
+                  Navigator.of(context)
+                      .pushNamedAndRemoveUntil('/login', (route) => false);
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        lang.currentLanguage == 'ms'
+                            ? 'Ralat: Sila log keluar dan log masuk semula untuk memadam akaun.'
+                            : 'Error: Please logout and login again to delete your account.',
+                      ),
+                      backgroundColor: Colors.redAccent,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               }
             },
             child: Text(lang.translate('remove'),

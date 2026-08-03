@@ -4,7 +4,6 @@ import 'package:little_johor_explorer/data/services/auth_service.dart';
 import 'package:little_johor_explorer/data/services/language_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
-  /// Pre-fill the email if coming from login screen
   final String? initialEmail;
 
   const ForgotPasswordScreen({super.key, this.initialEmail});
@@ -93,12 +92,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  // ── Form view ─────────────────────────────────────────────────────────────
   Widget _buildFormView(LanguageService lang) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Icon
         Container(
           width: 52,
           height: 52,
@@ -110,8 +107,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               color: Colors.white, size: 26),
         ),
         const SizedBox(height: 24),
-
-        // Title
         Text(
           lang.currentLanguage == 'ms'
               ? 'Tetapkan Semula Kata Laluan'
@@ -135,8 +130,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
         const SizedBox(height: 32),
-
-        // Email field
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -169,8 +162,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
         const SizedBox(height: 20),
-
-        // Send button
         SizedBox(
           width: double.infinity,
           height: 50,
@@ -202,14 +193,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  // ── Success view ──────────────────────────────────────────────────────────
   Widget _buildSuccessView(LanguageService lang) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(height: 20),
-
-        // Success icon
         Container(
           width: 72,
           height: 72,
@@ -222,7 +210,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               color: Color(0xFF22C55E), size: 36),
         ),
         const SizedBox(height: 24),
-
         Text(
           lang.currentLanguage == 'ms' ? 'E-mel Dihantar!' : 'Email Sent!',
           style: const TextStyle(
@@ -235,8 +222,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 12),
         Text(
           lang.currentLanguage == 'ms'
-              ? 'Kami telah menghantar pautan tetapan semula kata laluan ke\n${_emailController.text.trim()}\n\nSila semak peti masuk anda.'
-              : 'We\'ve sent a password reset link to\n${_emailController.text.trim()}\n\nPlease check your inbox.',
+              ? 'Kami telah menghantar pautan tetapan semula kata laluan ke\n${_emailController.text.trim()}\n\nSila semak peti masuk anda dan folder spam.'
+              : 'We\'ve sent a password reset link to\n${_emailController.text.trim()}\n\nPlease check your inbox and spam folders.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 14,
@@ -245,8 +232,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
         const SizedBox(height: 32),
-
-        // Back to login
         SizedBox(
           width: double.infinity,
           height: 50,
@@ -268,8 +253,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // Resend
         TextButton(
           onPressed:
               _isLoading ? null : () => setState(() => _emailSent = false),

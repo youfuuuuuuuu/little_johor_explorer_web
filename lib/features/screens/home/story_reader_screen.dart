@@ -22,12 +22,12 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
   int _currentPage = 0;
   bool _isMuted = true;
   bool _isPlaying = false;
+  bool _isTtsReady = false;
   Story? _story;
 
   late DateTime _startTime;
   bool _isSessionSaved = false;
 
-  // Animation for page transitions
   late AnimationController _pageAnimController;
   late Animation<double> _pageAnim;
 
@@ -76,12 +76,78 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
   }
 
   void _initTTS() async {
-    await _flutterTts.setLanguage("ms-MY");
-    await _flutterTts.setSpeechRate(0.4);
-    await _flutterTts.setPitch(1.1);
-    _flutterTts.setCompletionHandler(() {
-      if (mounted) setState(() => _isPlaying = false);
-    });
+    try {
+      await _flutterTts.awaitSpeakCompletion(true);
+      await _flutterTts.setLanguage("ms-MY");
+      await _flutterTts.setSpeechRate(0.45);
+      await _flutterTts.setPitch(1.0);
+
+      try {
+        List<dynamic> voices = [];
+        for (int i = 0; i < 5; i++) {
+          voices = await _flutterTts.getVoices;
+          if (voices.isNotEmpty) break;
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
+
+        Map<String, String>? bestVoice;
+
+        for (var voice in voices) {
+          if (voice is Map) {
+            String locale = voice["locale"]?.toString().toLowerCase() ?? "";
+            String name = voice["name"]?.toString().toLowerCase() ?? "";
+
+            if (locale.contains("ms-my") ||
+                locale.contains("ms_my") ||
+                name.contains("malay") ||
+                name.contains("rizwan")) {
+              bestVoice = {
+                "name": voice["name"].toString(),
+                "locale": voice["locale"].toString()
+              };
+              break;
+            }
+          }
+        }
+
+        if (bestVoice == null) {
+          for (var voice in voices) {
+            if (voice is Map) {
+              String locale = voice["locale"]?.toString().toLowerCase() ?? "";
+              String name = voice["name"]?.toString().toLowerCase() ?? "";
+
+              if (locale.contains("id-id") ||
+                  locale.contains("id_id") ||
+                  name.contains("indonesia")) {
+                bestVoice = {
+                  "name": voice["name"].toString(),
+                  "locale": voice["locale"].toString()
+                };
+                break;
+              }
+            }
+          }
+        }
+
+        if (bestVoice != null) {
+          debugPrint(
+              "Forcing Web Voice: ${bestVoice['name']} (${bestVoice['locale']})");
+          await _flutterTts.setVoice(bestVoice);
+        }
+      } catch (voiceError) {
+        debugPrint("Voice search skipped/failed: $voiceError");
+      }
+
+      _flutterTts.setCompletionHandler(() {
+        if (mounted) setState(() => _isPlaying = false);
+      });
+
+      if (mounted) {
+        setState(() => _isTtsReady = true);
+      }
+    } catch (e) {
+      debugPrint("TTS Setup Error: $e");
+    }
   }
 
   @override
@@ -91,17 +157,29 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
   }
 
   void _speakCurrentPage() async {
-    if (_isMuted || _story == null) return;
+    if (_isMuted || _story == null || !_isTtsReady) return;
+
     setState(() => _isPlaying = true);
     final text = _story!.pages[_currentPage].textMs.isNotEmpty
         ? _story!.pages[_currentPage].textMs
         : _story!.pages[_currentPage].textEn;
-    await _flutterTts.speak(text);
+
+    try {
+      await _flutterTts.speak(text);
+    } catch (e) {
+      debugPrint("Speak error: $e");
+    }
   }
 
   void _stopSpeaking() async {
-    await _flutterTts.stop();
-    if (mounted) setState(() => _isPlaying = false);
+    if (!_isTtsReady) return;
+
+    try {
+      await _flutterTts.stop();
+      if (mounted) setState(() => _isPlaying = false);
+    } catch (e) {
+      debugPrint("Stop error: $e");
+    }
   }
 
   void _toggleMute() {
@@ -125,7 +203,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
   }
 
   Widget _buildImage(String path, {BoxFit fit = BoxFit.cover}) {
-    // Added fit parameter
     if (path.isEmpty) return _imagePlaceholder();
     if (path.startsWith('http')) {
       return Image.network(
@@ -142,7 +219,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
     final clean = path.replaceFirst('file:///', '').replaceFirst('assets/', '');
     return Image.asset(
       'assets/$clean',
-      fit: fit, // Use the passed fit value
+      fit: fit,
       errorBuilder: (_, __, ___) => _imagePlaceholder(),
     );
   }
@@ -204,11 +281,10 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
         if (didPop) _saveReadingSession();
       },
       child: Scaffold(
-        backgroundColor: Colors.white, // Threads-style clean white
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: Column(
             children: [
-              // ── App bar (Read Button Removed from here) ─────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
                 child: Row(
@@ -227,7 +303,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _story!.title.toLowerCase(), // Modern lowercase
+                            _story!.title.toLowerCase(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -251,8 +327,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                   ],
                 ),
               ),
-
-              // ── Progress bar ───────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                 child: Row(
@@ -281,8 +355,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                   ],
                 ),
               ),
-
-              // ── Pages ──────────────────────────────────────────────────
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
@@ -311,7 +383,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                         padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                         child: Column(
                           children: [
-                            // ── Story image ──────────────────────────
                             Expanded(
                               flex: 5,
                               child: Center(
@@ -334,7 +405,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                                         borderRadius: BorderRadius.circular(24),
                                         child: _buildImage(
                                           page.imageUrl,
-                                          fit: BoxFit.contain,
+                                          fit: BoxFit.cover,
                                         ),
                                       ),
                                     ),
@@ -343,7 +414,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                               ),
                             ),
                             const SizedBox(height: 20),
-                            // ── Story text ───────────────────────────
                             Expanded(
                               flex: 3,
                               child: Container(
@@ -378,8 +448,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                   },
                 ),
               ),
-
-              // ── Page dots ──────────────────────────────────────────────
               if (totalPages > 1)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -411,8 +479,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                     ),
                   ),
                 ),
-
-              // ── Navigation bar with Centered BACA Button ─────────────────
               Container(
                 padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
                 decoration: const BoxDecoration(
@@ -422,7 +488,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                 ),
                 child: Row(
                   children: [
-                    // 1. Previous Button
                     Expanded(
                       child: _navButton(
                         onTap: _currentPage > 0
@@ -434,15 +499,12 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                         filled: false,
                       ),
                     ),
-
                     const SizedBox(width: 12),
-
-                    // 2. Center "READ/BACA" Toggle Button
                     GestureDetector(
                       onTap: _toggleMute,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        height: 50, // Matches height of nav buttons
+                        height: 50,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
                           color: _isMuted ? Colors.white : Colors.black,
@@ -482,10 +544,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
                         ),
                       ),
                     ),
-
                     const SizedBox(width: 12),
-
-                    // 3. Next / Finish Button
                     Expanded(
                       child: _navButton(
                         onTap: isLastPage
@@ -566,7 +625,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen>
     );
   }
 
-// Required for fade animation on non-current pages
   final Animation<double> kAlwaysCompleteAnimation =
       AlwaysStoppedAnimation<double>(1.0);
 }

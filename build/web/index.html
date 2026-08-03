@@ -1,152 +1,97 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <base href="/little_johor_explorer_web/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Little Johor">
-  
+  <meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Little Johor Explorer">
+
   <title>Little Johor Explorer</title>
+
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="icon" href="favicon.png">
 
   <style>
-    /* 2. Modern Social Aesthetic CSS */
-    body { 
-      background-color: #FFFFFF; /* Pure white background */
-      margin: 0; 
-      padding: 0; 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
     }
-    
+
     #loading {
+      position: fixed;
+      inset: 0;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      background-color: #FFFFFF;
-      transition: opacity 0.4s ease-out;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
+      background: white;
       z-index: 9999;
+      transition: opacity 0.3s ease-out;
     }
 
-    /* Sleek Native-style Spinner */
+    #loading.flutter-loaded {
+      opacity: 0;
+      pointer-events: none;
+    }
+
     .spinner {
-      width: 36px;
-      height: 36px;
-      border: 3px solid #F0F0F0;
-      border-top: 3px solid #000000;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #efefef;
+      border-top: 4px solid black;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin .8s linear infinite;
     }
 
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Minimalist Lowercase Text */
-    .loader-text {
-      font-weight: 800;
-      color: #000000;
-      margin-top: 24px;
-      font-size: 16px;
-      letter-spacing: -0.3px;
-    }
-  </style>
-
-  <style id="splash-screen-style">
-    html { height: 100% }
-    body {
-      margin: 0;
-      min-height: 100%;
-      background-color: #FFFFFF;
-      background-size: 100% 100%;
-    }
-    .center {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
-    }
-    .contain {
-      display:block;
-      width:100%; height:100%;
-      object-fit: contain;
-    }
-    .stretch {
-      display:block;
-      width:100%; height:100%;
-    }
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
-    }
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
-    }
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-    }
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-    }
-  </style>
-
-  <script id="splash-screen-script">
-    function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.body.style.background = "transparent";
-    }
-  </script>
-</head>
-<body>
-  
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
-
-  <!-- Modern Loading UI -->
-  <div id="loading">
-    <div class="spinner"></div>
-    <p class="loader-text">loading...</p>
-  </div>
-
-  <script>
-    window.addEventListener('flutter-first-frame', function() {
-      var loading = document.getElementById('loading');
-      if (loading) {
-        loading.style.opacity = '0';
-        setTimeout(function() {
-          loading.remove();
-        }, 400); // Matches the 0.4s transition in CSS
+      to {
+        transform: rotate(360deg);
       }
-    });
-  </script>
+    }
 
-  <script src="flutter_bootstrap.js" async=""></script>
+    p {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+
+</head>
+
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Loading...</p>
+</div>
+
+<script>
+  // Removes the loading overlay once Flutter Web renders its first frame.
+  window.addEventListener('flutter-first-frame', function () {
+    var loading = document.getElementById('loading');
+    if (loading) {
+      loading.classList.add('flutter-loaded');
+      setTimeout(function () {
+        loading.remove();
+      }, 300);
+    }
+  });
+</script>
+
+<!-- CRITICAL: this script actually boots the Flutter engine.
+     Do not remove it -- without this line nothing will ever render. -->
+<script src="flutter_bootstrap.js" async></script>
 
 </body>
+
 </html>

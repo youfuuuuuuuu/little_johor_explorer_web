@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:little_johor_explorer/core/widgets/message_bubble.dart';
 import 'package:little_johor_explorer/data/services/auth_service.dart';
 import 'package:little_johor_explorer/data/services/language_service.dart';
 import 'package:little_johor_explorer/data/services/chat_service.dart';
@@ -20,6 +20,11 @@ class FamilyChatScreen extends StatefulWidget {
 
 class _FamilyChatScreenState extends State<FamilyChatScreen> {
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -55,10 +60,12 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final msgDate = DateTime(date.year, date.month, date.day);
-    if (msgDate == today)
+    if (msgDate == today) {
       return lang.currentLanguage == 'ms' ? 'Hari ini' : 'Today';
-    if (msgDate == yesterday)
+    }
+    if (msgDate == yesterday) {
       return lang.currentLanguage == 'ms' ? 'Semalam' : 'Yesterday';
+    }
     return DateFormat('d MMM yyyy').format(date);
   }
 
@@ -123,7 +130,6 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
         titleSpacing: 20,
         title: Row(
           children: [
-            // Family icon
             Container(
               width: 36,
               height: 36,
@@ -302,7 +308,6 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
     required LanguageService lang,
   }) {
     final timeStr = DateFormat('h:mm a').format(msg.timestamp);
-    final bool isParent = senderRole == 'parent';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -328,7 +333,6 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
               crossAxisAlignment:
                   isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                // Name + role badge + time
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4, left: 2, right: 2),
                   child: Row(
@@ -358,7 +362,6 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
                     ],
                   ),
                 ),
-                // Message bubble
                 if (msg.audioPath != null && msg.audioPath!.isNotEmpty)
                   AudioMessageBubble(audioPath: msg.audioPath!, isUser: isMe)
                 else
@@ -386,13 +389,9 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
                             offset: const Offset(0, 2))
                       ],
                     ),
-                    child: Text(
-                      msg.text,
-                      style: TextStyle(
-                        color: isMe ? Colors.white : const Color(0xFF0A0A0A),
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
+                    child: MessageBubble(
+                      message: msg.text,
+                      isUser: isMe,
                     ),
                   ),
               ],
@@ -440,8 +439,6 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
   }
 }
 
-// ── Input bar ─────────────────────────────────────────────────────────────────
-
 class _ChatInputBar extends StatefulWidget {
   final String roomId;
   final User currentUser;
@@ -462,6 +459,9 @@ class _ChatInputBar extends StatefulWidget {
 
 class _ChatInputBarState extends State<_ChatInputBar> {
   final TextEditingController _controller = TextEditingController();
+
+  bool _isSending = false;
+
   stt.SpeechToText? _speech;
   bool _isListening = false;
   bool _speechEnabled = false;
@@ -502,6 +502,8 @@ class _ChatInputBarState extends State<_ChatInputBar> {
     String existingText = _controller.text;
     await _speech!.listen(
       onResult: (val) {
+        if (_isSending) return;
+
         if (mounted && val.recognizedWords.isNotEmpty) {
           setState(() {
             String newWords = val.recognizedWords;
@@ -564,11 +566,12 @@ class _ChatInputBarState extends State<_ChatInputBar> {
 
   void _stopTimer() {
     _timer?.cancel();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _isListening = false;
         _recordDuration = 0;
       });
+    }
   }
 
   void _toggleLocale() => setState(() {
@@ -578,6 +581,16 @@ class _ChatInputBarState extends State<_ChatInputBar> {
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+
+    setState(() {
+      _isSending = true;
+    });
+
+    if (_isListening) {
+      _stopTimer();
+      await _speech?.stop();
+    }
+
     final chatService = Provider.of<ChatService>(context, listen: false);
     final newMessage = FamilyMessage(
       senderId: widget.currentUser.id,
@@ -586,14 +599,23 @@ class _ChatInputBarState extends State<_ChatInputBar> {
       avatarUrl: widget.currentUser.avatarUrl,
       timestamp: DateTime.now(),
     );
+
+    _controller.clear();
+    _lastFullText = "";
+
     try {
       await chatService.sendMessage(widget.roomId, newMessage);
-      _controller.clear();
-      _lastFullText = "";
       widget.onMessageSent();
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Failed to send: $e'),
           backgroundColor: Colors.redAccent,
