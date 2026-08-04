@@ -11,30 +11,28 @@ import 'package:little_johor_explorer/data/services/gemini_service.dart';
 import 'package:little_johor_explorer/data/services/language_service.dart';
 import 'package:little_johor_explorer/data/services/chat_service.dart';
 import 'package:little_johor_explorer/data/services/progress_service.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env");
-
   try {
+    // 1. Initialize Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-
     debugPrint("Firebase OK");
 
+    // 2. Initialize Storage
     final storage = LocalStorageService();
     await storage.init();
-
     debugPrint("Storage OK");
 
+    // 3. Initialize Language Service
     final language = LanguageService();
     await language.init();
-
     debugPrint("Language OK");
 
+    // 4. Run App inside the single try-block
     runApp(
       MultiProvider(
         providers: [
@@ -64,17 +62,25 @@ void main() async {
       ),
     );
 
-    debugPrint("runApp()");
+    debugPrint("runApp() OK");
   } catch (e, stack) {
-    debugPrint(e.toString());
+    debugPrint("Initialization Error: $e");
     debugPrint(stack.toString());
 
+    // Fallback UI in case of startup failure
+    // Fallback UI in case of startup failure
     runApp(
       MaterialApp(
         home: Scaffold(
-          body: Center(
-            child: Text(
-              e.toString(),
+          body: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Center(
+              // 👈 Changed 'field:' to 'child:' here
+              child: Text(
+                "App Initialization Error:\n$e",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red, fontSize: 16),
+              ),
             ),
           ),
         ),

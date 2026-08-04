@@ -2,11 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:little_johor_explorer/data/services/gemini_service.dart';
 import 'package:little_johor_explorer/data/services/auth_service.dart';
 import 'package:little_johor_explorer/data/services/language_service.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:little_johor_explorer/core/widgets/message_bubble.dart';
 
 class ChatWithHistoryScreen extends StatefulWidget {
@@ -91,7 +90,7 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen>
           setState(() {
             String newWords = val.recognizedWords;
             if (isRestart && !newWords.startsWith(existingText)) {
-              _messageController.text = existingText + " " + newWords;
+              _messageController.text = "$existingText $newWords";
             } else {
               _messageController.text = newWords;
             }
@@ -186,9 +185,9 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen>
       if (userHistory.isNotEmpty) {
         setState(() {
           for (var msg in userHistory) {
-            final isUser = msg.role == 'user';
-            final text =
-                msg.parts.whereType<TextPart>().map((e) => e.text).join();
+            final isUser = msg['role'] == 'user';
+            final text = msg['text'] ?? '';
+
             _chatMessages.add({
               'text': text,
               'isUser': isUser,
@@ -198,9 +197,7 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen>
             });
           }
         });
-      }
-
-      if (_chatMessages.isEmpty) {
+      } else {
         setState(() {
           _chatMessages.add({
             'text': lang.currentLanguage == 'ms'
@@ -591,10 +588,9 @@ class _ChatWithHistoryScreenState extends State<ChatWithHistoryScreen>
   Widget _inputBar(LanguageService lang) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
-        border:
-            Border(top: BorderSide(color: const Color(0xFFE8E8E8), width: 0.5)),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFAFAFA),
+        border: Border(top: BorderSide(color: Color(0xFFE8E8E8), width: 0.5)),
       ),
       child: Column(
         children: [

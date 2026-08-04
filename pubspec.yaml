@@ -25,15 +25,13 @@ dependencies:
   # Authentication & Core
   firebase_core: ^4.5.0
   firebase_auth: ^6.1.4
+  firebase_ai: ^3.11.0
   cloud_firestore: ^6.1.3
 
   # Local Storage Features
   shared_preferences: ^2.2.3
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-
-  # Google AI Developer Studio Client
-  google_generative_ai: ^0.4.7
 
   # Audio, Media & Tools
   http: ^1.6.0
@@ -43,7 +41,6 @@ dependencies:
   record: ^7.1.1
   path_provider: ^2.1.2
   dice_bear: ^1.0.0
-  flutter_dotenv: ^6.0.1
   flutter_local_notifications: ^22.0.1
   app_badge_plus: ^1.3.1
 
@@ -82,7 +79,6 @@ flutter:
         - asset: assets/fonts/NotoSans-VariableFont_wdth,wght.ttf
 
   assets:
-    - .env
     - assets/images/
     - assets/images/avatars/
     - assets/images/johor/
